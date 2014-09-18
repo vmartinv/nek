@@ -1,15 +1,10 @@
 #ifndef TIMER_H
 #define TIMER_H
-#include <stdint.h>
-#include <stddef.h>
-typedef struct timer_object{
-	uint32_t ticks;
-	uint32_t repeat;
-	char * name;
-	
-	void (*handler)(struct timer_object *);
+#include <types.h>
 
-	struct timer_object * next; //Internal
-} timer_object_t;
+void create_timer(int id,uint32_t delay,int (*handler)(int));
+void sleep(uint32_t ticks);
 
+//system only
+void cycle_timers();
 #endif

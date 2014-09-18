@@ -2,7 +2,7 @@
 #include <memory.h>
 #include <string.h>
 #include <arch/x86/paging.h>
-#include <cedille.h>
+#include <nesos.h>
 #include <stdio.h>
 
 ///Bitmap of every page in the system, and whether its free (0) or used (1).
@@ -15,8 +15,12 @@ Sets the page that address is in to be used.
 void pmm_bitmap_set(uintptr_t address)
 {
 	uint32_t frame = address / 0x1000;
+	
 	uint32_t idx = INDEX_FROM_BIT(frame);
 	uint32_t off = OFFSET_FROM_BIT(frame);
+	//~ if(idx>bitmap_frames){
+		//~ printk("fail","pmm_bitmap_set %xud\n",frame);
+	//~ }
 	bitmap[idx] |= (0x1 << off);
 }
 /**
@@ -27,6 +31,10 @@ void pmm_bitmap_clear(uintptr_t address)
    uint32_t frame = address / 0x1000;
    uint32_t idx = INDEX_FROM_BIT(frame);
    uint32_t off = OFFSET_FROM_BIT(frame);
+	//~ if(idx>bitmap_frames){
+		//~ printk("fail","pmm_bitmap_clear %ud\n",frame);
+		//~ 
+	//~ }
    bitmap[idx] &= ~(0x1 << off);
 }
 /**
@@ -37,7 +45,12 @@ uint32_t pmm_bitmap_test(uintptr_t address)
    uint32_t frame = address / 0x1000;
    uint32_t idx = INDEX_FROM_BIT(frame);
    uint32_t off = OFFSET_FROM_BIT(frame);
-   return (bitmap[idx] & (0x1 << off));
+	//~ if(idx>bitmap_frames){
+		//~ printk("fail","pmm_bitmap_test %ud\n",frame);
+		//~ return 0;
+	//~ }
+	
+	return (bitmap[idx] & (0x1 << off));
 }
 /**
 Finds the first free page, and returns it's address
@@ -111,7 +124,7 @@ page_t * pmm_get_page(page_directory_t *dir,uint32_t address, uint8_t make)
 	{
 		uint32_t temp;
 		dir->tables[table_index] = (page_table_t*)kmalloc_aligned_phys(sizeof(page_table_t), &temp);
-		memset(dir->tables[table_index], 0, 0x1000);
+		memset(dir->tables[table_index], 0, sizeof(page_table_t));
 		dir->tablesPhysical[table_index] = temp | 0x7; // PRESENT, RW, US.
 		return &dir->tables[table_index]->pages[page_index%1024];
 	}
@@ -125,9 +138,11 @@ void init_pmm(uint32_t total_b)
 		printk("fail","PMM:Unknown amount of free memory? Reading Configuration Space...\n");
 		return;
 	}
-	bitmap_frames = total_b / 1000; // KB = 1000, KiB = 1024
+	//~ total_b+=0x00F0000;
+	bitmap_frames = total_b / 0x1000 +1; // KB = 1000, KiB = 1024
 	
-	bitmap = kmalloc(INDEX_FROM_BIT(bitmap_frames));
-	memset(bitmap, 0, INDEX_FROM_BIT(bitmap_frames));
+	size_t bitmap_sz=sizeof(uintptr_t)*bitmap_frames/32;
+	bitmap = kmalloc(bitmap_sz);
+	memset(bitmap, 0, bitmap_sz);
 	
 }

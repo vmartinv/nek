@@ -1,6 +1,7 @@
 #ifndef ARCH_X86_TEXTMODE_CONSOLE_H
 #define ARCH_X86_TEXTMODE_CONSOLE_H
 #include <stdint.h>
+
 ///Write a char to the screen
 void textmode_write(int x,int y,uint8_t data);
 ///Write a colored char to the screen
@@ -12,9 +13,10 @@ void textmode_scroll(int from,int to);
 ///Set cursor position
 void textmode_setcursor(int x,int y);
 ///Set attribute byte
-void textmode_setcolor(uint8_t back,uint8_t fore);
+void textmode_setbackcolor(uint8_t back);
+void textmode_setforecolor(uint8_t fore);
 ///Reset attribute byte
 void textmode_resetcolor();
-
+void textmode_changedest(uint16_t *newdest);
 void textmode_clear();
 #endif

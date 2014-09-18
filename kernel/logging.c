@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include <video.h>
-#include <cedille.h>
+#include <graphics/video.h>
+#include <nesos.h>
+#ifdef BOARDx86generic
+#include <arch/x86/textmode_console.h>
+#endif
 /**
 Logs output to system console. Works as an enchanced printf.
 @param[in] type  The kind or type of the entry. Is autocolored if it is common.
@@ -32,9 +35,9 @@ void printk(const char * type, const char *fmt, ...)
 	}
 	else if(strcmp(type,"ok") == 0 || strcmp(type,"done") == 0) //Good
 	{
-		video_settextfore(0xA);
+		textmode_setforecolor(0xA);
 		printf("%-6s: ",type);
-		video_reset_attr();
+		textmode_resetcolor();
 	}
 	else if(strcmp(type,"fail") == 0 ||
 		strcmp(type,"fault") == 0 ||
@@ -42,38 +45,38 @@ void printk(const char * type, const char *fmt, ...)
 		strcmp(type,"oops") == 0 ||
 		strcmp(type,"error") == 0) //Bad
 	{
-		video_settextfore(0x4);
+		textmode_setforecolor(0x4);
 		printf("%-6s: ",type);
-		video_reset_attr();
+		textmode_resetcolor();
 	}
 	else if(strcmp(type,"info") == 0 || strcmp(type,"status") == 0) // Info
 	{
-		video_settextfore(0xB);
+		textmode_setforecolor(0xB);
 		printf("%-6s: ",type);
-		video_reset_attr();
+		textmode_resetcolor();
 	}
 	else if(strcmp(type,"cpu") == 0 ||
 		strcmp(type,"device") == 0 ||
 		strcmp(type,"daemon") == 0)
 	{
 		DEBUG_ONLY_LOG
-		video_settextfore(0xD);
+		textmode_setforecolor(0xD);
 		printf("%-6s: ",type);
-		video_reset_attr();
+		textmode_resetcolor();
 	}
 	else if(strcmp(type,"warn") == 0) //Warnings
 	{
 		DEBUG_ONLY_LOG
-		video_settextfore(0xE);
+		textmode_setforecolor(0xE);
 		printf("%-6s: ",type);
-		video_reset_attr();
+		textmode_resetcolor();
 	}
 	else if(strcmp(type,"debug") == 0)
 	{
 		DEBUG_ONLY_LOG;
-		video_settextfore(0xE);
+		textmode_setforecolor(0xE);
 		printf("%-6s: ",type);
-		video_reset_attr();
+		textmode_resetcolor();
 	}
 	else
 	{

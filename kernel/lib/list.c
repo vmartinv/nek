@@ -33,18 +33,17 @@ void list_append(list_t * list, list_node_t * node) {
 	list->length++;
 }
 
-list_node_t * list_insert(list_t * list, void * item) {
+
+list_node_t * list_create_item(void * item) {
 	/* Insert an item into a list */
 	list_node_t * node = malloc(sizeof(list_node_t));
 	node->value = item;
 	node->next  = NULL;
 	node->prev  = NULL;
-	list_append(list, node);
-
 	return node;
 }
 
-void list_append_after(list_t * list, list_node_t * before, list_node_t * node) {
+void list_insert_after(list_t * list, list_node_t * before, list_node_t * node) {
 	if (!list->tail) {
 		list_append(list, node);
 		return;
@@ -67,13 +66,27 @@ void list_append_after(list_t * list, list_node_t * before, list_node_t * node) 
 	list->length++;
 }
 
-list_node_t * list_insert_after(list_t * list, list_node_t * before, void * item) {
-	list_node_t * node = malloc(sizeof(list_node_t));
-	node->value = item;
-	node->next  = NULL;
-	node->prev  = NULL;
-	list_append_after(list, before, node);
-	return node;
+void list_insert_before(list_t * list, list_node_t * after, list_node_t * node) {
+	if (!list->head) {
+		list_append(list, node);
+		return;
+	}
+	if (after == NULL) {
+		node->next = list->head;
+		list->head->prev = node;
+		list->head = node;
+		list->length++;
+		return;
+	}
+	if (after == list->head) {
+		list->head = node;
+	} else {
+		after->prev->next = node;
+		node->prev = after->prev;
+	}
+	node->next = after;
+	after->prev = node;
+	list->length++;
 }
 
 list_t * list_create(void) {
@@ -159,7 +172,7 @@ list_t * list_copy(list_t * original) {
 	list_t * out = list_create();
 	list_node_t * node = original->head;
 	while (node) {
-		list_insert(out, node->value);
+		list_append(out, list_create_item(node->value));
 	}
 	return out;
 }

@@ -1,24 +1,44 @@
+# Add toolchain to path
+export PATH := ../cross/bin/:$(PATH)
+
 #Configuration
 #--------------------------------------------
 ARCH := x86
 BOARD := generic
 
 BOARD_ID := ${ARCH}/${BOARD}
-COMPILE_OPTIONS := -DDEBUG
-
 #Tools
 #--------------------------------------------
+CC:=i686-elf-gcc
+AS:=nasm -felf
+LD:=i686-elf-ld -m elf_i386
+OBJDUMP:=i686-elf-objdump
+OBJCOPY:=i686-elf-objcopy
 
-AS := nasm -felf 
-CC:=clang -target i586-elf
-STRIP:= strip
-NM := nm
-LD := ./toolkit/binutils/bin/i586-elf-ld -m elf_i386
+BUILD_NUMBER_FILE=build.num
+BUILD_NUMBER_LDFLAGS += -Xlinker --defsym -Xlinker KERN_BNUM=$$(cat $(BUILD_NUMBER_FILE))
 
-C_OPTIONS := -ffreestanding -std=gnu99  -nostartfiles 
-C_OPTIONS += -Wall -Wextra -Wno-unused-function -Wno-unused-parameter
-C_OPTIONS += -Wno-unused-function
-C_OPTIONS += -s -g -Os
+# Freestanding binary, strip extra shits
+#CFLAGS= -std=gnu99  -ffreestanding  -finline-functions -Wno-unused-parameter -Wall -Wextra -I./ -I./kernel/includes -march=i686  -D_IEEE_MODE
+CFLAGS := -ffreestanding -std=gnu99  -nostartfiles -D_IEEE_MODE
+CFLAGS += -Wall -Wextra -Wno-unused-function -Wno-unused-parameter
+LDFLAGS= -ffreestanding -nostdlib -lgcc $(BUILD_NUMBER_LDFLAGS)
+ASFLAGS =
+
+debug ?= 0
+ifeq ($(debug), 1)
+    CFLAGS += -DDEBUG -g -fvar-tracking -fvar-tracking-assignments  -gdwarf-2
+    LDFLAGS += -g
+else
+	CFLAGS += -O2
+endif
+
+textmode ?= 0
+ifeq ($(textmode), 1)
+	CFLAGS += -DCONSOLE_TEXTMODE
+	ASFLAGS += -DCONSOLE_TEXTMODE
+	
+endif
 
 LD_SCRIPT := kernel/arch/${ARCH}/${BOARD}/link.ld
 INCLUDE_DIR := "kernel/includes"
@@ -26,12 +46,9 @@ INCLUDE_DIR := "kernel/includes"
 GENISO := xorriso -as mkisofs
 EMU := qemu-system-i386
 
-#Specific to x64 stuff
-X64_32_CC = clang
-X64_32_AS = nasm -felf
-X64_32_LD = ld
 #FILES
 #--------------------------------------------
+FDLIBM_FILES := $(patsubst %.c,%.o,$(wildcard fdlibm/*.c))
 
 GLOBAL_ROOT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/*.c))
 GLOBAL_INIT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/init/*.c))
@@ -40,6 +57,7 @@ GLOBAL_LOW_FILES := $(patsubst %.c,%.o,$(wildcard kernel/low/*.c))
 GLOBAL_FS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/fs/*.c))
 GLOBAL_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/lib/*.c))
 GLOBAL_TEST_FILES := $(patsubst %.c,%.o,$(wildcard kernel/test/*.c))
+GLOBAL_GRAPHICS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/graphics/*.c))
 
 ARCH_ROOT_FILES := $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/*.s)) $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/*.c))
 ARCH_DRIVERS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/drivers/*.c))
@@ -59,72 +77,77 @@ BOARD_TEST_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/t
 BOARD_BOOTSTRP_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/bootstrap/*.c))
 
 #Canonicate them together
-GLOBAL_FILES := ${GLOBAL_ROOT_FILES} ${GLOBAL_INIT_FILES} ${GLOBAL_DRIVERS_FILES} ${GLOBAL_LOW_FILES} ${GLOBAL_FS_FILES} ${GLOBAL_LIB_FILES} ${GLOBAL_TEST_FILES}
+GLOBAL_FILES := ${GLOBAL_ROOT_FILES} ${GLOBAL_INIT_FILES} ${GLOBAL_DRIVERS_FILES} ${GLOBAL_LOW_FILES} ${GLOBAL_FS_FILES} ${GLOBAL_LIB_FILES} ${GLOBAL_TEST_FILES} ${GLOBAL_GRAPHICS_FILES}
 ARCH_FILES := ${ARCH_ROOT_FILES} ${ARCH_DRIVERS_FILES} ${ARCH_LOW_FILES} ${ARCH_FS_FILES} ${ARCH_LIB_FILES} ${ARCH_TEST_FILES}
 BOARD_FILES :=${BOARD_ROOT_FILES} ${BOARD_INIT_FILES} ${BOARD_DRIVER_FILES} ${BOARD_LOW_FILES} ${BOARD_FS_FILES} ${BOARD_LIB_FILES} ${BOARD_TEST_FILES}
 
-ALL_SOURCE_FILES := ${GLOBAL_FILES} ${ARCH_FILES} ${BOARD_FILES}
+ALL_SOURCE_FILES := ${GLOBAL_FILES} ${ARCH_FILES} ${BOARD_FILES} ${FDLIBM_FILES}
+
 #RULES
 #--------------------------------------------
 
-all:build-dir kernel gen-symbols build/cdrom.iso
+all: run
 
-build-dir:
-	@echo "DIR    | build"
-	@mkdir -p build
+bin-dir:
+	@echo "DIR    | bin"
+	@mkdir -p bin
+	
+fdlibm: ${FDLIBM_FILES}
 
-kernel: ${GLOBAL_FILES} arch board
-	@echo " LD [K]| kernel.elf"
-	@${LD} ${LFLAGS} -T ${LD_SCRIPT} -o build/kernel.elf ${ALL_SOURCE_FILES}
-	@rm -f build/cdrom.iso
 arch: ${ARCH_FILES}
 
 board: ${BOARD_FILES}
 
-#Special targets
-x64_bootstrap:
-	@${X64_32_AS} -o kernel/arch/x86/x64/bootstrap/start.o kernel/arch/x86/x64/bootstrap/start.s
+kernel: bin-dir ${GLOBAL_FILES} fdlibm arch board
+	@echo " LD [K]| kernel.elf"
+	@${LD} ${LFLAGS} -T ${LD_SCRIPT} -o bin/kernel.elf $(ALL_SOURCE_FILES)
+ifeq ($(debug), 1)
+	@echo "GEN [M]| build/kernel.elf -> bin/kernel.sym"
+	@$(OBJDUMP) -b elf32-i386 -S -d bin/kernel.elf > bin/symbols.txt
+	@$(OBJCOPY) -I elf32-i386 --only-keep-debug bin/kernel.elf bin/kernel.sym
+	@$(OBJCOPY) -I elf32-i386 --strip-debug bin/kernel.elf
+endif
 
-	@${X64_32_CC} -c ${C_OPTIONS} -I${INCLUDE_DIR} -o kernel/arch/x86/x64/bootstrap/bootstrap.o kernel/arch/x86/x64/bootstrap/bootstrap.c
-	@${X64_32_CC} -c ${C_OPTIONS} -I${INCLUDE_DIR} -o kernel/arch/x86/x64/bootstrap/console.o kernel/arch/x86/x64/bootstrap/console.c
-	
-	@${X64_32_CC} -c ${C_OPTIONS} -I${INCLUDE_DIR} -o kernel/arch/x86/x64/bootstrap/printf.o kernel/lib/printf.c
+iso: kernel
+	@echo "ISO [A]| bin/cd.iso"
+	@cp bin/kernel.elf iso/boot/nesos2.img
+	@grub-mkrescue iso -o bin/cd.iso
 
-	@${X64_32_LD} -Tkernel/arch/x86/x64/bootstrap/link.ld -o iso/ldcedilz kernel/arch/x86/x64/bootstrap/*.o
-	@rm -f build/cdrom.iso
+run: iso
+ifeq ($(debug), 1)
+	@${EMU} -s -S -m 25 -serial stdio -cdrom bin/cd.iso
+else
+	@${EMU} -m 25 -serial stdio -cdrom bin/cd.iso
+endif
 
-%.o: %.s
-	@echo " AS    |" $@
-	@${AS} -o $@ $<
+gdb:
+	@gdb --eval-command='target remote :1234' --symbols=bin/kernel.sym
 
-%.o: %.c
+fdlibm/%.o: fdlibm/%.c
 	@echo " CC    |" $@
-	@${CC} -c ${C_OPTIONS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-maybe-uninitialized -I${INCLUDE_DIR} -o $@ $<
+
+%.o: %.s compiler_flags
+	@echo " AS    |" $@
+	@${AS} ${ASFLAGS} -o $@ $<
+
+%.o: %.c compiler_flags
+	@echo " CC    |" $@
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
+	
+
+.PHONY: clean force
+
+compiler_flags: force
+	@echo '$(CFLAGS) $(ASFLAGS)' | cmp -s - $@ || echo '$(CFLAGS) $(ASFLAGS)' > $@
 
 clean:
 	@echo "CLN    | *.o" 
 	@-find . -name "*.o" -type f -delete
-
-build/cdrom.iso:
-	@echo "ISO [A]| build/cdrom.iso"
-	@cp build/kernel.elf iso/kernel.elf
-	@${GENISO} -R -b boot/grub/stage2_eltorito -quiet -no-emul-boot -boot-load-size 4 -boot-info-table -o build/cdrom.iso iso
-
-gen-symbols: kernel
-	@echo "GEN [M]| build/kernel.elf -> build/kernel.map"
-	@${NM} build/kernel.elf > build/kernel.map
-
-#Special/Common Targets
-
-x86:
-
-icp:
-	make AS=arm-none-eabi-as LD="arm-none-eabi-gcc -lgcc -ffreestanding -fno-builtin -nostartfiles" LFLAGS="" CC="arm-none-eabi-gcc" ARCH=arm BOARD=integrator-cp
-gba:
-	@echo "Not avalable right now"
-
-#RUN
-run-x86:
-	@${EMU} -m 4 -serial stdio -cdrom build/cdrom.iso
-run-arm-icp:
-	@qemu-system-arm -M integratorcp -serial stdio -kernel build/kernel.elf -nographic -monitor none -initrd iso/boot/initrd.img
+	@echo "CLN    | *.elf" 
+	@-find . -name "*.elf" -type f -delete
+	@echo "CLN    | bin/*" 
+	@rm -f bin/*
+	@echo "CLN    | compiler_flags" 
+	@rm -f compiler_flags
+	@rm -f iso/boot/nesos2.img

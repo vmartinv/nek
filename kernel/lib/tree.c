@@ -59,7 +59,7 @@ tree_node_t * tree_node_create(void * value) {
 
 void tree_node_insert_child_node(tree_t * tree, tree_node_t * parent, tree_node_t * node) {
 	/* Insert a node as a child of parent */
-	list_insert(parent->children, node);
+	list_append(parent->children, list_create_item((void*)node));
 	node->parent = parent;
 	tree->nodes++;
 }

@@ -56,7 +56,7 @@ char * vfs_canonicalize_path(char *cwd, char *input) {
 			char *s = malloc(sizeof(char) * (strlen(pch) + 1));
 			memcpy(s, pch, strlen(pch) + 1);
 
-			list_insert(out, s);
+			list_append(out, list_create_item(s));
 			pch = strtok_r(NULL,PATH_SEPARATOR_STRING,&save);
 		}
 		free(path);
@@ -81,7 +81,7 @@ char * vfs_canonicalize_path(char *cwd, char *input) {
 		} else {
 			char * s = malloc(sizeof(char) * (strlen(pch) + 1));
 			memcpy(s, pch, strlen(pch) + 1);
-			list_insert(out, s);
+			list_append(out, list_create_item(s));
 		}
 		pch = strtok_r(NULL, PATH_SEPARATOR_STRING, &save);
 	}

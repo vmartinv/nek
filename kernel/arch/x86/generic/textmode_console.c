@@ -9,20 +9,31 @@ uint8_t defaultAttribute = (0 << 4) | (15  & 0x0F);
 
 uint8_t tm_cfore = 0xF, tm_cback = 0x0;
 
+void textmode_changedest(uint16_t *newdest){
+	video_memory=newdest;
+}
+
 ///Sets the Textmode cursor posititon
 void textmode_setcursor(int x,int y)
 {
+#ifdef TEXTMODE
 	uint16_t location = y * 80 + x;
 	outb(0x3D4, 14);
 	outb(0x3D5, location >> 8);
 	outb(0x3D4, 15);
 	outb(0x3D5, location);
+#endif
 }
 ///Sets the attribute byte
-void textmode_setcolor(uint8_t back,uint8_t fore)
+void textmode_setbackcolor(uint8_t back)
 {
-	attributeByte = (back << 4) | (fore  & 0x0F);
+	attributeByte=(back << 4) | (attributeByte&(1<<4));
 }
+
+void textmode_setforecolor(uint8_t fore){
+	attributeByte=(attributeByte&(-1<<4)) | (fore&0x0F);
+}
+
 ///Resets the attribute byte
 void textmode_resetcolor()
 {
@@ -47,7 +58,7 @@ void textmode_write_color(int x,int y,uint8_t data, uint8_t attr)
 ///Clears the screen
 void textmode_clear()
 {
-	memset((void *)video_memory, 0x00, 80 * 24 * 2);
+	memset((void *)video_memory, 0x00, 80 * 25 * 2);
 }
 ///FIXME: Get this to work.
 uint8_t textmode_read(int x,int y)
@@ -60,12 +71,8 @@ void textmode_scroll(int from,int to) //0 and 24
 	uint16_t blank = 0x20  | (attributeByte << 8);
 	int i;
 	for (i = from*80; i < to*80; i++)
-	{
 		video_memory[i] = video_memory[i+80];
-	}
-
+		
 	for (i = to*80; i < (to+1)*80; i++)
-	{
 		video_memory[i] = blank;
-	}
 }

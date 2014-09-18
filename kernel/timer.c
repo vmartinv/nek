@@ -1,103 +1,78 @@
 #include <timer.h>
-#include <stdint.h>
-#include <stddef.h>
 #include <stdlib.h>
-uint32_t allocated_timers = 0;
-uint32_t active_timers = 0;
+#include <logging.h>
+#include <graphics/video.h>
+#include <lib/list.h>
+#include <types.h>
 
-timer_object_t * timer_root = NULL;
+typedef struct timer_object{
+	uint32_t delay, nxt;
+	int id;
+	int (*handler)(int);
+} timer_object_t;
 
-timer_object_t * timer_default = NULL;
+list_t *timers;
+uint32_t elapsed=0;
 
-timer_object_t * create_timer(char * name,uint32_t ticks, uint32_t repeat,void (*handler)(struct timer_object *))
+inline static void insert_timer(timer_object_t * t)
 {
-	printk("debug","Creating [%s], running in %d ticks, every %d ticks\n",name,ticks,repeat);
-	timer_object_t * t = (timer_object_t*)malloc(sizeof(timer_object_t));
-	t->name = name;
-	t->ticks = ticks;
-	t->repeat = repeat;
-	t->handler = handler;
-	allocated_timers++;
-	return t;
-}
-
-int insert_timer(timer_object_t * t)
-{
-	timer_object_t * test = timer_root;
-	timer_object_t * test_prev = timer_root;
-	while(test != NULL)
-	{
-		if(t->ticks <= test->ticks) // 100 < 1000
-		{
-									// A->B->TEST_PREV->TEST->E
-
-			t->next = test; 		// A->B->TEST_PREV->TEST->E
-									//           T------>/
-
-			test_prev->next = t;	// A->B->TEST_PREV->T->TEST->E
-			active_timers++;
-
-			t->ticks = test->ticks - t->ticks;
-			return 0;
+	foreach(node, timers){
+		timer_object_t *timer=(timer_object_t*)node->value;
+		if(t->nxt <= timer->nxt){
+			list_insert_before(timers, node, list_create_item(t));
+			return;
 		}
-		if(test->next == NULL)
-		{
-			break;
-		}
-		test_prev = test;
-		test = test->next;
 	}
 	//PROBABLY a longggggggggg running task, appending to list
-	test_prev->next = t;
-	t->next = NULL;
-	return 0;
+	list_append(timers, list_create_item(t));
 }
 
-void kernel_timer_reaper(timer_object_t * t)
+void create_timer(int id,uint32_t delay,int (*handler)(int))
 {
-	printk("test","REAPER!\n");
+	timer_object_t * t = (timer_object_t*)malloc(sizeof(timer_object_t));
+	t->id = id;
+	t->delay = delay;
+	t->nxt = elapsed+delay;
+	video_dump_console();
+	t->handler = handler;
+	insert_timer(t);
+}
+
+inline static void check_timers(){
+	if(!timers || !timers->length)	return;
+	timer_object_t *first_timer=(timer_object_t *)timers->head->value;
+	if(first_timer->nxt <= elapsed){
+		list_delete(timers, timers->head);
+		if(!first_timer->handler(first_timer->id)){
+			first_timer->nxt+=first_timer->delay;
+			insert_timer(first_timer);
+		}
+		else
+			free(first_timer);
+		check_timers();
+	}
 }
 
 void cycle_timers()
 {
-	if(timer_root == NULL)
-	{
-		return;
-	}
-
-	if(timer_root->ticks == 0)
-	{
-		timer_root->handler(timer_root);
-		if(timer_root->repeat == 0)
-		{
-			timer_root = timer_root->next;
-		}
-		else
-		{
-			timer_object_t * timer = timer_root;
-			timer_root = timer_root->next;
-			timer->ticks = timer->repeat;
-			insert_timer(timer);
-		}
-		return;
-	}
-	else
-	{
-		timer_root->ticks--;
-	}
+	elapsed++;
+	check_timers();
 }
 
-void test_timer()
+void sleep(uint32_t ticks){
+	uint32_t end=elapsed+ticks;
+	while(elapsed<end);
+}
+
+static int test_timer(int id)
 {
-	printk("testA","Called!\n");
+	printk("timer","Timer %d Called!\n", id);
+	video_dump_console();
+	return 0;
 }
 
 int init_timer()
 {
-	timer_default = create_timer("ktreaperd",1000,1000,kernel_timer_reaper);
-	timer_root = timer_default;
-	active_timers++;
-	timer_object_t * test = create_timer("test",100,100,test_timer);
-	insert_timer(test);
+	timers=list_create();
 	return 0;
 }

@@ -4,7 +4,7 @@
 #ifdef BOARDx86generic
 #include <arch/x86/paging.h>
 #endif
-#include <cedille.h>
+#include <nesos.h>
 #include <logging.h>
 #include <string.h>
 

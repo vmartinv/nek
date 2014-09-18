@@ -3,7 +3,7 @@
 #include <memory.h>
 #include <string.h>
 #include <logging.h>
-#include <cedille.h>
+#include <nesos.h>
 #include <arch/x86/paging.h>
 #include <arch/x86/descriptor_tables.h>
 #include <stdio.h>

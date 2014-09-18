@@ -3,7 +3,7 @@
 #include <string.h>
 #include <logging.h>
 #include <stdio.h>
-#include <cedille.h>
+#include <nesos.h>
 #include <syscall.h>
 int syscall_panic(char * s)
 {

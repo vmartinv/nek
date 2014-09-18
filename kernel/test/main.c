@@ -1,4 +1,4 @@
-
+#include <logging.h>
 #define TESTING_SUITE_ENABLED
 
 #ifndef TESTING_SUITE_ENABLED

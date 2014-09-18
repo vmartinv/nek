@@ -3,7 +3,7 @@
 #include <string.h>
 #include <logging.h>
 #include <stdio.h>
-#include <cedille.h>
+#include <nesos.h>
 #include <syscall.h>
 #include <arch/x86/descriptor_tables.h>
 

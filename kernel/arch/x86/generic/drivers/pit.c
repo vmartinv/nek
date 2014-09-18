@@ -1,6 +1,6 @@
 #include <arch/x86/descriptor_tables.h>
 #include <arch/x86/ports.h>
-#include <logging.h>
+#include <timer.h>
 uint32_t pit_internal_ticks = 0;
 ///Handles the PIT ticks and reports them to the central clock.
 void pit_handler()

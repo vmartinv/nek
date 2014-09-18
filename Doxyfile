@@ -4,9 +4,9 @@
 # Project related configuration options
 #---------------------------------------------------------------------------
 DOXYFILE_ENCODING      = UTF-8
-PROJECT_NAME           = Cédille
-PROJECT_NUMBER         = 0.0.0.6
-PROJECT_BRIEF          = Microkernel
+PROJECT_NAME           = NesOS
+PROJECT_NUMBER         = 0.0.0.2
+PROJECT_BRIEF          = Microkernel with NES emulator
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = doc
 CREATE_SUBDIRS         = NO

@@ -1,9 +1,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <video.h>
 #ifdef BOARDx86generic
 #include <arch/x86/ports.h>
+#include <arch/x86/textmode_console.h>
+#include <graphics/video.h>
 #endif
 
 volatile uint32_t term_x;
@@ -15,7 +16,7 @@ volatile uint32_t term_y;
 
 void scroll() {
     if (term_y >= 25) {
-        video_scroll(0, 24);
+        textmode_scroll(0, 24);
         term_y = 24;
     }
 }
@@ -30,12 +31,12 @@ void printc(unsigned char c) {
        term_x = 0;
     } else if (c == '\n') {
         #ifndef ARCHx86
-        video_printchar(term_x, term_y, c);
+        textmode_write(term_x, term_y, c);
         #endif
         term_x = 0;
         term_y++;
     } else if (c >= ' ') {
-        video_printchar(term_x, term_y, c);
+        textmode_write(term_x, term_y, c);
         term_x++;
     }
     if (term_x >= 80) {
@@ -45,7 +46,7 @@ void printc(unsigned char c) {
     // Scroll the screen if needed.
     scroll();
     // Move the hardware cursor.
-    video_setcursor(term_x, term_y);
+    textmode_setcursor(term_x, term_y);
 }
 
 ///  Prints a basic string
@@ -62,11 +63,12 @@ void console_printdiv() {
     #endif
 }
 void console_clear() {
-    video_clear();
+    textmode_clear();
 }
 /// Initialises the whole thing
 void console_init() {
     #ifdef ARCHx86
+#ifdef TEXTMODE
         uint16_t offset;
         outb(0x3D4, 14);
         offset = inb(0x3D5) << 8;
@@ -74,10 +76,13 @@ void console_init() {
         offset |= inb(0x3D5);
         term_x = offset % 80;
         term_y = offset / 80;
+#else
+		textmode_changedest(vga_get_text_buffer());
+#endif
     #else
         term_x = 0;
         term_y = 0;
         console_clear();
     #endif
-    video_setcursor(term_x, term_y);
+    textmode_setcursor(term_x, term_y);
 }

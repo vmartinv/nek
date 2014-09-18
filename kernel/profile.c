@@ -1,8 +1,11 @@
 #include <stdio.h>
-#include <video.h>
 #include <memory.h>
-
+#include <logging.h>
 #include <config.h>
+#include <graphics/video.h>
+#ifdef BOARDx86generic
+#include <arch/x86/textmode_console.h>
+#endif
 
 extern uint32_t memory_bytes_avalable;
 
@@ -34,17 +37,17 @@ void profiler_memory()
 	printf("Used Memory (block size is 0x%x):\n",block_size);
 	uint32_t col = 0;
 	uint32_t total = 0;
-	video_settextfore(PROFILER_C_DEBUG);
+	textmode_setforecolor(PROFILER_C_DEBUG);
 	printf(" %04d ",0);
 	for (uint32_t i = 0; i <= memory_bytes_avalable; i += block_size) {
 		if(pmm_bitmap_test(i))
 		{
-			video_settextfore(PROFILER_C_YES);
+			textmode_setforecolor(PROFILER_C_YES);
 			printf("%c",219);
 		}
 		else
 		{
-			video_settextfore(PROFILER_C_NO);
+			textmode_setforecolor(PROFILER_C_NO);
 			//printf("%c",176);
 			printf("%c",219);
 		}
@@ -53,7 +56,7 @@ void profiler_memory()
 		if(col == PROFILER_COL)
 		{
 			col = 0;
-			video_settextfore(PROFILER_C_DEBUG);
+			textmode_setforecolor(PROFILER_C_DEBUG);
 			printf(" <-0x%08x\n %04d ",i,total);
 		}
 	}
@@ -70,9 +73,9 @@ void profiler_memory()
 		}
 		//total += 1;
 	}
-	video_settextfore(PROFILER_C_DEBUG);
+	textmode_setforecolor(PROFILER_C_DEBUG);
 	printf("\b\b\b\b\b     %d/%d blocks used\n",used,total);
-	video_reset_attr();
+	textmode_resetcolor();
 	console_printdiv();;
 }
 #endif
