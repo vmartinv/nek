@@ -1,3 +1,4 @@
 *.o
 bin/*
 doc/*
+iso/boot/*.img
