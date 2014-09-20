@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <logging.h>
+#include <sys/logging.h>
 #include <string.h>
 #include <arch/x86/descriptor_tables.h>
 

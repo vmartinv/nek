@@ -1,5 +1,4 @@
-#include <stddef.h>
-#include <stdint.h>
+#include <types.h>
 #include <stdio.h>
 #ifdef BOARDx86generic
 #include <arch/x86/ports.h>
@@ -68,7 +67,7 @@ void console_clear() {
 /// Initialises the whole thing
 void console_init() {
     #ifdef ARCHx86
-#ifdef TEXTMODE
+#ifdef CONSOLE_TEXTMODE
         uint16_t offset;
         outb(0x3D4, 14);
         offset = inb(0x3D5) << 8;

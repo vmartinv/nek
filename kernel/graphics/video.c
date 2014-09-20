@@ -1,4 +1,4 @@
-#ifndef CONSOLE_TEXTMODE
+#ifndef CONSOLE_ONLY
 
 #include <graphics/video.h>
 #include <types.h>
@@ -16,69 +16,72 @@ static bool initialized=false;
 
 // Text compatibility
 static u8 *font;
-u16 text_buffer[80*25];
-static u32 fg_colour;
+static u16 text_buffer[80*25];
 
 // Video mode info
-static u16 screenwidth, screenheight, screendepth, screenbytesPerLine;
-static u8* screenbase;
-static u32 *nesscreenbase;
+static u16 screenwidth=0, screenheight=0, screendepth=0, screenbytesPerLine=0;
+static const size_t nesscreensize=NES_WIDTH*(NES_HEIGHT+16)*sizeof(u32);
+static u8 *screenbase=0;
+static u32 *nesscreenbase=0;
 
 
 u16 *vga_get_text_buffer(){
 	return text_buffer;
 }
 
-void setpixel_16(uint8_t *pos, uint32_t color){
+static void setpixel_16(uint8_t *pos, uint32_t color){
 	*(uint16_t*)pos = (SVGA_24TO16BPP(color) & 0xFFFF);
 }
 
-void setpixel_24(uint8_t *pos, uint32_t color){
+static void setpixel_24(uint8_t *pos, uint32_t color){
     *pos++ = color & 255;           // BLUE
     *pos++ = (color >> 8) & 255;   	// GREEN
     *pos = (color >> 16) & 255;  	// RED
 }
 
-void setpixel_32(uint8_t *pos, uint32_t color){
+static void setpixel_32(uint8_t *pos, uint32_t color){
 	*(uint32_t*)pos=color;
 }
-void (*setpixel)(uint8_t *pos, uint32_t color);
 
-void putpixel(int x, int y, uint32_t color){
-	setpixel(screenbase + y*screenbytesPerLine + x*screendepth, color);
-}
+static void (*setpixel)(uint8_t *pos, uint32_t color);
 
-void video_printchar(int textx,int texty, unsigned char c) {
-	if(!initialized) return;
+
+
+inline static void video_printchar(int textx, int texty, u16 c) {
+	static const u32 consolecolors[]={0x000000, 0x0000c0, 0x00c000, 0x00c0c0, 0xc00000, 0xc000c0, 0xc08000, 0xc0c0c0, 0x808080, 0x0000ff, 0x00ff00, 0x00ffff, 0xff0000, 0xff00ff, 0xffff00, 0xffffff};
+	u32 forecolor=consolecolors[(c>>8)&15],backcolor=consolecolors[(c>>12)&15];
 	// Handle printing of a regular character
 	// Characters are 16 px tall, i.e. 0x10 bytes in stored rep
-	uint8_t *ch_ptr = font + c*CHAR_HEIGHT;
+	uint8_t *ch_ptr = font + (c&0xFF)*CHAR_HEIGHT;
 	uint8_t *write_ptr=screenbase + texty*CHAR_HEIGHT*screenbytesPerLine + textx*CHAR_WIDTH*screendepth;
 	const uint8_t x_to_bitmap[CHAR_WIDTH] = {0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
 	for(uint8_t y = 0; y < CHAR_HEIGHT; y++) {
 		for(uint8_t x = 0; x < CHAR_WIDTH; x++)
 			if(x_to_bitmap[x] & *ch_ptr)
-				setpixel(write_ptr+x*screendepth, fg_colour);
+				setpixel(write_ptr+x*screendepth, forecolor);
 			else
-				setpixel(write_ptr+x*screendepth, 0);
+				setpixel(write_ptr+x*screendepth, backcolor);
 		write_ptr+=screenbytesPerLine;
 		ch_ptr++;
 	}
 }
 
 void video_clear(){
+	if(!initialized) return;
 	memset(screenbase, 0, screenbytesPerLine * screenheight);
+	memset(nesscreenbase, 0, nesscreensize);
 }
 
 //this handles pixels coming directly from the nes engine
 void video_updatepixel(int line,int pixel,u8 s){
+	if(!initialized) return;
 	int offset = (line * 256) + pixel;
-	if(line >= 8 && line < 232) {
+	//~ if(line >= 8 && line < 232) {
 		nesscreenbase[offset] = palette_get_value(s);
-	}
-	else {
-		nesscreenbase[offset] = 0;
-	}
+	//~ }
+	//~ else {
+		//~ nesscreenbase[offset] = 0;
+	//~ }
 }
 
 inline static u8 *go_offset(u8 *ptr, int x, int y){
@@ -86,33 +89,46 @@ inline static u8 *go_offset(u8 *ptr, int x, int y){
 }
 
 int offsetx, offsety;
-void video_dump_frame(){
+void video_show_frame(){
+	if(!initialized) return;
 	u8 *write_ptr=go_offset(screenbase, offsetx, offsety);
 	u32 *read_ptr=nesscreenbase;
-	for(int y=0;y<NES_HEIGHT;y++) {
-		for(int x=0;x<NES_WIDTH;x++)
-			setpixel(write_ptr+x*screendepth, *read_ptr++);
+	for(int y=0;y<NES_HEIGHT*2;y++) {
+		for(int x=0;x<NES_WIDTH;x++){
+			setpixel(write_ptr+2*x*screendepth, *read_ptr);
+			setpixel(write_ptr+(2*x+1)*screendepth, *read_ptr++);
+		}
+		if(!(y%2)) read_ptr-=NES_WIDTH;
 		write_ptr+=screenbytesPerLine;
 	}
+	//~ video_dump_console();
+	//~ memcpy(screenbase, screenbuffer, screenbytesPerLine*screenheight);
 }
 
 
-void video_dump_console(){
+void video_show_console(){
+	if(!initialized) return;
 	for(int y=0;y<25;y++)
 		for(int x=0;x<80;x++)
-			video_printchar(x,y,text_buffer[(y*80)+x]&0xFF);
+			video_printchar(x, y, text_buffer[(y*80)+x]);
+	//~ for(int x=0; x<	screenwidth; x++)
+	//~ for(int y=50; y<	screenheight; y++)
+	//~ {
+	//~ u8 *ptr=go_offset(screenbase, x, y);
+	//~ setpixel(ptr, 0);}
+	//~ video_printchar(0, 0, '@');
+	//~ memcpy(screenbase, screenbuffer, screenbytesPerLine*screenheight);
 }
 
 /*
  * Initialises the framebuffer console
  */
 void video_init(svga_mode_info_t *svga_mode_info) {
-	
 	screenbytesPerLine = svga_mode_info->pitch;
 	screenwidth = svga_mode_info->screen_width;
 	screenheight = svga_mode_info->screen_height;
 	screendepth = svga_mode_info->bpp / 8;
-	screenbase = (u8*)svga_map_fb(svga_mode_info->physbase, screenbytesPerLine *screenheight);
+	screenbase = (u8*)svga_mode_info->physbase;
 	
 	switch(screendepth){
 	case 2: setpixel=setpixel_16; break;
@@ -120,21 +136,23 @@ void video_init(svga_mode_info_t *svga_mode_info) {
 	case 4: setpixel=setpixel_32; break;
 	}
 	font=ter_i16b_raw;
-	fg_colour = 0xFFFFFF;
 		
-	nesscreenbase= (u32*)malloc(NES_WIDTH*(NES_HEIGHT+16)*sizeof(u32));
-	for(int y=0; y<NES_HEIGHT; y++)	
-		for(int x=0; x<NES_WIDTH; x++)
-			video_updatepixel(y, x, GETINDEX_COLOR(13, 0));
-	offsety=(screenheight-NES_HEIGHT)/2;
-	offsetx=(screenwidth-NES_WIDTH)/2;
+	nesscreenbase= (u32*)malloc(nesscreensize);
+	memset(nesscreenbase, 0, nesscreensize);
+	offsety=(screenheight-NES_HEIGHT*2)/2;
+	offsetx=(screenwidth-NES_WIDTH*2)/2;
 	video_clear();
 	initialized=true;
-	video_dump_console();
 }
 
 //~ int video_getwidth()		{	return(screenwidth);		}
 //~ int video_getheight()		{	return(screenheight);		}
 //~ int video_getbpp()			{	return(screendepth*8);		}
-
+#else
+void video_init(svga_mode_info_t *svga_mode_info){}
+void video_show_frame(){}
+void video_show_console(){}
+void video_updatepixel(int line,int pixel,u8 s){}
+void video_clear(){}
+u16 *vga_get_text_buffer(){return NULL;}
 #endif

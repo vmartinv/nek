@@ -1,13 +1,12 @@
-#include <logging.h>
+#include <sys/logging.h>
 #include <stdio.h>
-#include <vfs.h>
+#include <sys/vfs.h>
 #include <nesos.h>
 #include <graphics/video.h>
+#include <sys/timer.h>
+#include <sys/syscall.h>
+#include <sys/task.h>
 
-void profiler_memory();
-int init_syscalls();
-int task_init();
-int init_timer();
 
 int start_service(char *daemon,int essential,int (*func)())
 {
@@ -27,8 +26,6 @@ void dmain()
 	//Start services
 	start_service("syscalld",1,init_syscalls);
 	//~ start_service("taskd",1,task_init);
-	start_service("kvfsd",0,init_vfs);
+	//~ start_service("kvfsd",0,init_vfs);
 	start_service("timerd",1,init_timer);
-	video_dump_console();
-	kmain();
 }

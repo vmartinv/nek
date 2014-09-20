@@ -1,11 +1,10 @@
-#include <vfs.h>
+#include <sys/vfs.h>
 #include <lib/tree.h>
-#include <logging.h>
-#include <memory.h>
+#include <sys/logging.h>
+#include <sys/memory.h>
 #include <stdlib.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
+#include <types.h>
 #include <string.h>
 tree_t * vfs_tree; 
 vfs_node_t * vfs_root;

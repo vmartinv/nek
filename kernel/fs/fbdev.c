@@ -1,6 +1,5 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <vfs.h>
+#include <types.h>
+#include <sys/vfs.h>
 #include <string.h>
 #include <stdlib.h>
 #define FBDEV_SIZE 80 * 25

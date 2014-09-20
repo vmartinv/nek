@@ -34,5 +34,4 @@ typedef struct svga_mode_info {
 	uint8_t reserved1[206];
 } __attribute__((packed)) svga_mode_info_t;
 
-uint32_t svga_map_fb(uint32_t real_addr, uint32_t fb_length);
 #endif

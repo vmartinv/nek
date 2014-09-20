@@ -1,148 +1,177 @@
-#include <logging.h>
-#include <memory.h>
+#include <sys/logging.h>
+#include <sys/memory.h>
+#include <math.h>
 #include <string.h>
-#include <arch/x86/paging.h>
 #include <nesos.h>
 #include <stdio.h>
+#include <sys/profiler.h>
 
 ///Bitmap of every page in the system, and whether its free (0) or used (1).
 uintptr_t * bitmap; 
- ///How many frames bitmap holds.
-uint32_t bitmap_frames = 0x0;
+ ///bitmap size.
+size_t bitmap_sz = 0x0;
+
+#define PAGE_SIZE 0x1000
+static uint32_t first_free_byte=0;
+//~ const uintptr_t offset=1024*1024;//First MB
+uintptr_t offset=0;//First MB
+
+
 /**
 Sets the page that address is in to be used.
 **/
-void pmm_bitmap_set(uintptr_t address)
+inline static void bitmap_set(uint32_t a, uint32_t b)
 {
-	uint32_t frame = address / 0x1000;
-	
-	uint32_t idx = INDEX_FROM_BIT(frame);
-	uint32_t off = OFFSET_FROM_BIT(frame);
-	//~ if(idx>bitmap_frames){
-		//~ printk("fail","pmm_bitmap_set %xud\n",frame);
-	//~ }
-	bitmap[idx] |= (0x1 << off);
+	uint32_t aby=a/32, bby=b/32, aoff=a%32, boff=b%32;
+	if(aby==bby){
+		bitmap[aby]|= ~((1<<aoff)-1) & ((1<<boff)-1);
+	}
+	else{
+		bitmap[aby]|= ~((1<<aoff)-1);
+		bitmap[bby]|=  ((1<<boff)-1);
+		if(b-a>33)
+			memset(&bitmap[aby+1], 0xFF, sizeof(uint32_t)*(bby-aby-1));
+	}
+	if(aby==first_free_byte && bitmap[aby]==0xFFFFFFFF){
+		first_free_byte=bby;
+		while(bitmap[first_free_byte]==0xFFFFFFFF) first_free_byte++;
+	}
 }
+
 /**
 Sets the page that address is in to be free.
 **/
-void pmm_bitmap_clear(uintptr_t address)
+inline static void bitmap_clear(uint32_t a, uint32_t b)
 {
-   uint32_t frame = address / 0x1000;
-   uint32_t idx = INDEX_FROM_BIT(frame);
-   uint32_t off = OFFSET_FROM_BIT(frame);
-	//~ if(idx>bitmap_frames){
-		//~ printk("fail","pmm_bitmap_clear %ud\n",frame);
-		//~ 
-	//~ }
-   bitmap[idx] &= ~(0x1 << off);
+	uint32_t aby=a/32, bby=b/32, aoff=a%32, boff=b%32;
+	if(aby==bby){
+		bitmap[aby]&= ((1<<aoff)-1) | ~((1<<boff)-1);
+	}
+	else{
+		bitmap[aby]&=  ((1<<aoff)-1);
+		bitmap[bby]&= ~((1<<boff)-1);
+		if(b-a>33)
+			memset(&bitmap[aby+1], 0x00, sizeof(uint32_t)*(bby-aby-1));
+	}
+	if(aby<first_free_byte) first_free_byte=aby;
 }
+
 /**
 Tests to see that the page address is in is set.
 **/
-uint32_t pmm_bitmap_test(uintptr_t address)
+int pmm_bitmap_test(uintptr_t address)
 {
-   uint32_t frame = address / 0x1000;
-   uint32_t idx = INDEX_FROM_BIT(frame);
-   uint32_t off = OFFSET_FROM_BIT(frame);
-	//~ if(idx>bitmap_frames){
-		//~ printk("fail","pmm_bitmap_test %ud\n",frame);
-		//~ return 0;
-	//~ }
-	
-	return (bitmap[idx] & (0x1 << off));
+	if(address<offset) return -1;//kernel memory
+    uint32_t frame = (address-offset) / PAGE_SIZE;
+	return bitmap[frame/32] & (1 << (frame%32)) ? 1 : 0;
 }
+
 /**
 Finds the first free page, and returns it's address
 **/
-uint32_t pmm_bitmap_findfree()
+inline static int fits_inside(uint32_t pages, const uint32_t bits)
 {
-	uint32_t i, j;
-	for (i = 0; i < INDEX_FROM_BIT(bitmap_frames); i++)
-	{
-		if (bitmap[i] != 0xFFFFFFFF) // nothing free, exit early.
-		{
-			// at least one bit is free here.
-			for (j = 0; j < 32; j++)
-			{
-				uint32_t toTest = 0x1 << j;
-				if ( !(bitmap[i]&toTest) )
-				{
-					return i*4*8+j;
-				}
+	uint32_t k=0;
+	for(uint32_t i = 0; i < 32; i++){
+		if(!((1<<i)&bits)){
+			if(++k==pages) return i+1-pages;
+		}
+		else k=0;
+	}
+	return -1;
+}
+
+
+/** This function is supposed to lock the memory data structures. It
+ * could be as simple as disabling interrupts or acquiring a spinlock.
+ * It's up to you to decide. 
+ *
+ * \return 0 if the lock was acquired successfully. Anything else is
+ * failure.
+ */
+int liballoc_lock(){
+	return 0;
+}
+
+/** This function unlocks what was previously locked by the liballoc_lock
+ * function.  If it disabled interrupts, it enables interrupts. If it
+ * had acquiried a spinlock, it releases the spinlock. etc.
+ *
+ * \return 0 if the lock was successfully released.
+ */
+int liballoc_unlock(){
+	return 0;
+}
+
+/** This is the hook into the local system which allocates pages. It
+ * accepts an integer parameter which is the number of pages
+ * required.  The page size was set up in the liballoc_init function.
+ *
+ * \return NULL if the pages were not allocated.
+ * \return A pointer to the allocated memory.
+ */
+void* liballoc_alloc(int pages){
+	//~ printf("allocating %d pages...\n", pages);
+	uintptr_t start=0;
+	size_t left=pages;
+	for(size_t i = first_free_byte; i < bitmap_sz; i++){
+		if(pages<31){
+			int f=fits_inside(pages, bitmap[i]);
+			if(f!=-1){
+				bitmap_set(i*32+f, i*32+f+pages);
+				return (void*)((i*32+f)*PAGE_SIZE+offset);
 			}
 		}
-	}
-	return (uint32_t)-1;
-}
-/**
-Allocates a page frame automatically. 
-**/
-void pmm_alloc_frame(page_t *page, int is_kernel, int is_writeable)
-{
-	if(page->frame != 0)
-	{
-		//oops("Attempted to realloc a page frame!");
-		return;
-	}
-	uint32_t index = pmm_bitmap_findfree();
-	if(index == (uintptr_t)-1) //If there is no more memory
-	{
-		//TODO: Call Kernel OOM Manager before panic
-		panic("Out of memory");
-	}
-	pmm_bitmap_set(index * 0x1000); // Make it the size of a page address boundry
-	page->present = 1;
-	page->rw = (is_writeable)?1:0;
-	page->user = (is_kernel)?0:1;
-	page->frame = index;
-}
-/**
-Deallocates a frame.
-**/
-void pmm_dealloc_frame(page_t *page)
-{
-	if(page->frame != 0)
-	{
-		pmm_bitmap_clear(page->frame);
-		page->frame = 0x0; // Page now doesn't have a frame.
-	}
-
-}
-/**
-Gets a page from dir, corresponding to the address address. If make is non-zero, and the page doesnt exist, it is created.
-**/
-page_t * pmm_get_page(page_directory_t *dir,uint32_t address, uint8_t make)
-{
-	uint32_t page_index = address / 0x1000;		//Page index
-	uint32_t table_index = page_index / 1024;	//Table index
-	if (dir->tables[table_index])
-	{
-		return &dir->tables[table_index]->pages[page_index%1024];
-	}
-	else if(make)
-	{
-		uint32_t temp;
-		dir->tables[table_index] = (page_table_t*)kmalloc_aligned_phys(sizeof(page_table_t), &temp);
-		memset(dir->tables[table_index], 0, sizeof(page_table_t));
-		dir->tablesPhysical[table_index] = temp | 0x7; // PRESENT, RW, US.
-		return &dir->tables[table_index]->pages[page_index%1024];
+		size_t zerosL=bitmap[i]?__builtin_clz(bitmap[i]):32;
+		if(zerosL!=32 && left>zerosL){
+			int zerosR=bitmap[i]?__builtin_ctz(bitmap[i]):32;
+			left=pages-zerosR;
+			start=i*32+32-zerosR;
+		}
+		else{
+			if(left<=zerosL){
+				bitmap_set(start, start+pages);
+				return (void*)(start*PAGE_SIZE+offset);
+			} 
+			left-=zerosL;
+		}
 	}
 	return NULL;
 }
 
-void init_pmm(uint32_t total_b)
+/** This frees previously allocated memory. The void* parameter passed
+ * to the function is the exact same value returned from a previous
+ * liballoc_alloc call.
+ *
+ * The integer value is the number of pages to free.
+ *
+ * \return 0 if the memory was successfully freed.
+ */
+int liballoc_free(void*ptr,int pages){
+	//~ printf("freeing %d pages...\n", pages);
+	uint32_t start=(((uintptr_t)ptr)-offset)/PAGE_SIZE;
+	bitmap_clear(start, start+pages);
+	return 0;
+}
+
+
+uint32_t pmm_get_memory_bytes(){
+	return bitmap_sz*32*PAGE_SIZE;
+}
+
+void init_pmm(intptr_t kernelstart, size_t upper_b)
 {
-	if(total_b == 0)
-	{
-		printk("fail","PMM:Unknown amount of free memory? Reading Configuration Space...\n");
+	if(upper_b == 0){
+		printk("fail","PMM:Unknown amount of free memory.\n");
 		return;
 	}
-	//~ total_b+=0x00F0000;
-	bitmap_frames = total_b / 0x1000 +1; // KB = 1000, KiB = 1024
+	offset=kmalloc_get_pre_placementaddr();//start of the free memory
+	size_t space_left=upper_b+kernelstart-offset;
+	bitmap_sz =space_left/PAGE_SIZE/32;
+	bitmap = kmalloc(bitmap_sz*sizeof(uint32_t));//each element stores 32 pages
 	
-	size_t bitmap_sz=sizeof(uintptr_t)*bitmap_frames/32;
-	bitmap = kmalloc(bitmap_sz);
-	memset(bitmap, 0, bitmap_sz);
-	
+	offset=kmalloc_get_pre_placementaddr();//since we used kmalloc, recalculate offsets
+	space_left=upper_b+kernelstart-offset;
+	bitmap_sz =space_left/PAGE_SIZE/32;
+	memset(bitmap, 0, sizeof(uint32_t)*bitmap_sz);//set all pages free
 }

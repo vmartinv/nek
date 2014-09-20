@@ -21,7 +21,7 @@
 #ifndef __palette_h__
 #define __palette_h__
 
-#include "types.h"
+#include <types.h>
 
 typedef struct palentry_s {
 	u8 r,g,b;

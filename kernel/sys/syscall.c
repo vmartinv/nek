@@ -1,10 +1,9 @@
-#include <stdint.h>
-#include <stddef.h>
+#include <types.h>
 #include <string.h>
-#include <logging.h>
+#include <sys/logging.h>
 #include <stdio.h>
 #include <nesos.h>
-#include <syscall.h>
+#include <sys/syscall.h>
 #include <arch/x86/descriptor_tables.h>
 
 static void *syscall_handlers[MAX_SYSCALLS];

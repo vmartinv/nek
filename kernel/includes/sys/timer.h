@@ -7,4 +7,5 @@ void sleep(uint32_t ticks);
 
 //system only
 void cycle_timers();
+int init_timer();
 #endif

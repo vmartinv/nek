@@ -1,8 +1,8 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <vfs.h>
+#include <types.h>
+#include <sys/vfs.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #define DEBUGDEV_BUFFERSIZE 0x1000
 uint8_t * debug_buffer;
 

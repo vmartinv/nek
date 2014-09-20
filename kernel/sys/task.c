@@ -1,5 +1,5 @@
-#include <task.h>
-#include <logging.h>
+#include <sys/task.h>
+#include <sys/logging.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef BOARDx86generic

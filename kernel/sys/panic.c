@@ -1,6 +1,5 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <logging.h>
+#include <types.h>
+#include <sys/logging.h>
 char * panic_str = NULL;
 char * oops_str = NULL;
 uint8_t oops_ctr = 0;

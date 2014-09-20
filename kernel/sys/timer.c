@@ -1,6 +1,6 @@
-#include <timer.h>
+#include <sys/timer.h>
 #include <stdlib.h>
-#include <logging.h>
+#include <sys/logging.h>
 #include <graphics/video.h>
 #include <lib/list.h>
 #include <types.h>
@@ -33,7 +33,6 @@ void create_timer(int id,uint32_t delay,int (*handler)(int))
 	t->id = id;
 	t->delay = delay;
 	t->nxt = elapsed+delay;
-	video_dump_console();
 	t->handler = handler;
 	insert_timer(t);
 }
@@ -67,7 +66,6 @@ void sleep(uint32_t ticks){
 static int test_timer(int id)
 {
 	printk("timer","Timer %d Called!\n", id);
-	video_dump_console();
 	return 0;
 }
 

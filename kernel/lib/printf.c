@@ -1,8 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
-//#include <x86/drivers/serial.h>
-#include <console.h>
+#include <sys/console.h>
 /* flags used in processing format string */
 #define	PR_LJ	0x01	/* left justify */
 #define	PR_CA	0x02	/* use A-F instead of a-f for hex */

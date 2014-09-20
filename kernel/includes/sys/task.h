@@ -30,4 +30,7 @@ typedef struct task
 	thread_t * main_thread;
 	struct task * parent; //NULL if 
 } task_t;
+
+int task_init();
+
 #endif

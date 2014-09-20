@@ -3,7 +3,9 @@
 #include <graphics/video.h>
 #include <math.h>
 #include <stdlib.h>
-#include <timer.h>
+#include <string.h>
+#include <sys/profiler.h>
+#include <sys/timer.h>
 
 typedef struct {
 	int x,y;
@@ -24,11 +26,21 @@ void corazon(int color, double r, double sep){
 }
 
 #define CLIP(x,min,max) (((x) > (max)) ? (max) : (((x) < (min)) ? (min) : (x)))
-
+#define N 2000
 void kmain()
 {
 	palette_init();
 	srand(345345);
+	video_show_console();
+	char *a[N];
+	for(int i=0; i<N; i++)
+		a[i]=malloc(2000000);
+	profiler_memory();
+	video_show_console();
+	for(int i=0; i<N; i++)
+		free(a[i]);
+	profiler_memory();
+	video_show_console();
 	while(1){
 		double r=0;
 		int p=rand()%32;
@@ -39,14 +51,13 @@ void kmain()
 			r=i*0.1;
 			double sep=CLIP((rand()/(double)RAND_MAX)/10, 0.001, 1);
 			corazon(GETINDEX_COLOR(p, rand()%8), r, fixedsep?sep2:sep);
-			video_dump_frame();
-			//~ sleep(1);
+			video_show_frame();
 		}
 		while(sz){
 			pto *p=&st[--sz];
 			video_updatepixel(p->y, p->x, GETINDEX_COLOR(13,0));
 			if(!(sz%(1000)) && sz>200)
-					video_dump_frame();
+					video_show_frame();
 		}
 	}
 }

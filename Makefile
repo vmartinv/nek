@@ -33,11 +33,10 @@ else
 	CFLAGS += -O2
 endif
 
-textmode ?= 0
-ifeq ($(textmode), 1)
-	CFLAGS += -DCONSOLE_TEXTMODE
-	ASFLAGS += -DCONSOLE_TEXTMODE
-	
+consoleonly ?= 0
+ifeq ($(consoleonly), 1)
+	CFLAGS += -DCONSOLE_ONLY
+	ASFLAGS += -DCONSOLE_ONLY
 endif
 
 LD_SCRIPT := kernel/arch/${ARCH}/${BOARD}/link.ld
@@ -51,12 +50,12 @@ EMU := qemu-system-i386
 FDLIBM_FILES := $(patsubst %.c,%.o,$(wildcard fdlibm/*.c))
 
 GLOBAL_ROOT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/*.c))
+GLOBAL_SYS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/sys/*.c))
 GLOBAL_INIT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/init/*.c))
 GLOBAL_DRIVERS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/drivers/*.c))
 GLOBAL_LOW_FILES := $(patsubst %.c,%.o,$(wildcard kernel/low/*.c))
 GLOBAL_FS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/fs/*.c))
 GLOBAL_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/lib/*.c))
-GLOBAL_TEST_FILES := $(patsubst %.c,%.o,$(wildcard kernel/test/*.c))
 GLOBAL_GRAPHICS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/graphics/*.c))
 
 ARCH_ROOT_FILES := $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/*.s)) $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/*.c))
@@ -64,7 +63,6 @@ ARCH_DRIVERS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/drivers/
 ARCH_LOW_FILES := $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/low/*.s))
 ARCH_FS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/fs/*.c))
 ARCH_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/lib/*.c))
-ARCH_TEST_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/test/*.c))
 
 BOARD_ROOT_FILES := $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/*.s)) $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/*.c))
 BOARD_INIT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/init/*.c)) $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/init/*.s))
@@ -72,12 +70,11 @@ BOARD_DRIVER_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}
 BOARD_LOW_FILES := $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/low/*.s))
 BOARD_FS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/fs/*.c))
 BOARD_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/lib/*.c))
-BOARD_TEST_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/test/*.c))
 
 BOARD_BOOTSTRP_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/bootstrap/*.c))
 
 #Canonicate them together
-GLOBAL_FILES := ${GLOBAL_ROOT_FILES} ${GLOBAL_INIT_FILES} ${GLOBAL_DRIVERS_FILES} ${GLOBAL_LOW_FILES} ${GLOBAL_FS_FILES} ${GLOBAL_LIB_FILES} ${GLOBAL_TEST_FILES} ${GLOBAL_GRAPHICS_FILES}
+GLOBAL_FILES := ${GLOBAL_ROOT_FILES} ${GLOBAL_SYS_FILES} ${GLOBAL_INIT_FILES} ${GLOBAL_DRIVERS_FILES} ${GLOBAL_LOW_FILES} ${GLOBAL_FS_FILES} ${GLOBAL_LIB_FILES} ${GLOBAL_TEST_FILES} ${GLOBAL_GRAPHICS_FILES}
 ARCH_FILES := ${ARCH_ROOT_FILES} ${ARCH_DRIVERS_FILES} ${ARCH_LOW_FILES} ${ARCH_FS_FILES} ${ARCH_LIB_FILES} ${ARCH_TEST_FILES}
 BOARD_FILES :=${BOARD_ROOT_FILES} ${BOARD_INIT_FILES} ${BOARD_DRIVER_FILES} ${BOARD_LOW_FILES} ${BOARD_FS_FILES} ${BOARD_LIB_FILES} ${BOARD_TEST_FILES}
 
@@ -123,17 +120,22 @@ endif
 gdb:
 	@gdb --eval-command='target remote :1234' --symbols=bin/kernel.sym
 
-fdlibm/%.o: fdlibm/%.c
+
+%.o: %.c compiler_flags
 	@echo " CC    |" $@
-	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-maybe-uninitialized -I${INCLUDE_DIR} -o $@ $<
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
 
 %.o: %.s compiler_flags
 	@echo " AS    |" $@
 	@${AS} ${ASFLAGS} -o $@ $<
 
-%.o: %.c compiler_flags
+fdlibm/%.o: fdlibm/%.c
 	@echo " CC    |" $@
-	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-maybe-uninitialized -I${INCLUDE_DIR} -o $@ $<
+
+kernel/lib/liballoc.o: kernel/lib/liballoc.c compiler_flags
+	@echo " CC    |" $@
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -w -o $@ $<
 	
 
 .PHONY: clean force

@@ -10,4 +10,7 @@ void deregister_syscall_handler (uint8_t n);
 
 #define SYSCALL_PANIC 0x0
 #define SYSCALL_OOPS 0x1
+
+
+int init_syscalls();
 #endif

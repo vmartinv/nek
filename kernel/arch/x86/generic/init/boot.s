@@ -15,7 +15,7 @@ align 4
 	dd MAGIC
 	dd FLAGS
 	dd CHECKSUM
-%ifndef CONSOLE_TEXTMODE
+%ifndef CONSOLE_ONLY
 	dd 0,0,0,0,0
 	dd 0						; Sets the linear graphics mode
 	dd 320,200,24 				; Width, height, depth

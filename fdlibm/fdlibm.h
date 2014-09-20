@@ -22,6 +22,8 @@
 #ifndef M_PI
 #define M_PI 3.14159654f
 #endif
+#define min(x,y) ((x)<(y)? (x) : (y))
+#define max(x,y) ((x)>(y)? (x) : (y))
 
 #ifdef __LITTLE_ENDIAN
 #define __HI(x) *(1+(int*)&x)
