@@ -33,7 +33,7 @@ action:	minimal subfunction for ?printf, calls function
 	'fn' with arg 'ptr' for each character to be output
 returns:total number of characters output
 *****************************************************************************/
-int do_printf(const char *fmt, va_list args, fnptr_t fn, void *ptr)
+inline static int do_printf(const char *fmt, va_list args, fnptr_t fn, void *ptr)
 {
 	unsigned flags, actual_wd, count, given_wd;
 	unsigned char *where, buf[PR_BUFLEN];
@@ -259,7 +259,7 @@ EMIT2:				if((flags & PR_LJ) == 0)
 /*****************************************************************************
 SPRINTF
 *****************************************************************************/
-static int vsprintf_help(unsigned c, void **ptr)
+inline static int vsprintf_help(unsigned c, void **ptr)
 {
 
 	char *dst;
@@ -270,7 +270,7 @@ static int vsprintf_help(unsigned c, void **ptr)
 }
 /*****************************************************************************
 *****************************************************************************/
-int vsprintf(char *buf, const char *fmt, va_list args)
+inline static int vsprintf(char *buf, const char *fmt, va_list args)
 {
 	int rv;
 
@@ -294,9 +294,9 @@ int sprintf(char *buf, const char *fmt, ...)
 PRINTF
 You must write your own putchar()
 *****************************************************************************/
-int vprintf_help(unsigned c, void **ptr)
+inline static int vprintf_help(unsigned c, void **ptr)
 {
-	printc(c);
+	putchar(c);
 	return 0 ;
 }
 

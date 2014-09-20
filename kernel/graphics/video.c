@@ -1,13 +1,14 @@
-#ifndef CONSOLE_ONLY
-
 #include <graphics/video.h>
 #include <types.h>
 #include <string.h>
 #include <graphics/svga.h>
 #include <stdlib.h>
+#include <math.h>//min & max
+#include <graphics/palette.h>
 #include "rsrc/ter-i16b.h"
 #include "rsrc/ter-i16n.h"
-#include <graphics/palette.h>
+
+#ifndef CONSOLE_ONLY
 
 #define CHAR_HEIGHT 16
 #define CHAR_WIDTH 8
@@ -16,7 +17,8 @@ static bool initialized=false;
 
 // Text compatibility
 static u8 *font;
-static u16 text_buffer[80*25];
+static u16 text_buffer[80*50];
+static unsigned lines, cols;
 
 // Video mode info
 static u16 screenwidth=0, screenheight=0, screendepth=0, screenbytesPerLine=0;
@@ -25,8 +27,14 @@ static u8 *screenbase=0;
 static u32 *nesscreenbase=0;
 
 
-u16 *vga_get_text_buffer(){
+u16 *video_get_text_buffer(){
 	return text_buffer;
+}
+unsigned video_get_lines(){
+	return lines;
+}
+unsigned video_get_cols(){
+	return cols;
 }
 
 static void setpixel_16(uint8_t *pos, uint32_t color){
@@ -47,7 +55,7 @@ static void (*setpixel)(uint8_t *pos, uint32_t color);
 
 
 
-inline static void video_printchar(int textx, int texty, u16 c) {
+inline static void video_putchar(int textx, int texty, u16 c) {
 	static const u32 consolecolors[]={0x000000, 0x0000c0, 0x00c000, 0x00c0c0, 0xc00000, 0xc000c0, 0xc08000, 0xc0c0c0, 0x808080, 0x0000ff, 0x00ff00, 0x00ffff, 0xff0000, 0xff00ff, 0xffff00, 0xffffff};
 	u32 forecolor=consolecolors[(c>>8)&15],backcolor=consolecolors[(c>>12)&15];
 	// Handle printing of a regular character
@@ -76,12 +84,12 @@ void video_clear(){
 void video_updatepixel(int line,int pixel,u8 s){
 	if(!initialized) return;
 	int offset = (line * 256) + pixel;
-	//~ if(line >= 8 && line < 232) {
+	if(line >= 8 && line < 232) {
 		nesscreenbase[offset] = palette_get_value(s);
-	//~ }
-	//~ else {
-		//~ nesscreenbase[offset] = 0;
-	//~ }
+	}
+	else {
+		nesscreenbase[offset] = 0;
+	}
 }
 
 inline static u8 *go_offset(u8 *ptr, int x, int y){
@@ -101,35 +109,32 @@ void video_show_frame(){
 		if(!(y%2)) read_ptr-=NES_WIDTH;
 		write_ptr+=screenbytesPerLine;
 	}
-	//~ video_dump_console();
-	//~ memcpy(screenbase, screenbuffer, screenbytesPerLine*screenheight);
 }
 
 
 void video_show_console(){
 	if(!initialized) return;
-	for(int y=0;y<25;y++)
-		for(int x=0;x<80;x++)
-			video_printchar(x, y, text_buffer[(y*80)+x]);
-	//~ for(int x=0; x<	screenwidth; x++)
-	//~ for(int y=50; y<	screenheight; y++)
-	//~ {
-	//~ u8 *ptr=go_offset(screenbase, x, y);
-	//~ setpixel(ptr, 0);}
-	//~ video_printchar(0, 0, '@');
-	//~ memcpy(screenbase, screenbuffer, screenbytesPerLine*screenheight);
+	int offset=screenwidth/CHAR_WIDTH>80;
+	for(unsigned y=0;y<lines;y++)
+		for(unsigned x=0;x<cols;x++)
+			video_putchar(x+offset, y, text_buffer[(y*80)+x]);
 }
 
-/*
- * Initialises the framebuffer console
- */
-void video_init(svga_mode_info_t *svga_mode_info) {
+
+void video_load_info(svga_mode_info_t *svga_mode_info){
 	screenbytesPerLine = svga_mode_info->pitch;
 	screenwidth = svga_mode_info->screen_width;
 	screenheight = svga_mode_info->screen_height;
 	screendepth = svga_mode_info->bpp / 8;
 	screenbase = (u8*)svga_mode_info->physbase;
-	
+	lines=min(screenheight/CHAR_HEIGHT, 50);
+	cols=min(screenwidth/CHAR_WIDTH, 80);
+}
+
+/*
+ * Initialises the framebuffer console
+ */
+void video_init() {
 	switch(screendepth){
 	case 2: setpixel=setpixel_16; break;
 	case 3: setpixel=setpixel_24; break;
@@ -154,5 +159,7 @@ void video_show_frame(){}
 void video_show_console(){}
 void video_updatepixel(int line,int pixel,u8 s){}
 void video_clear(){}
-u16 *vga_get_text_buffer(){return NULL;}
+u16 *video_get_text_buffer(){return NULL;}
+unsigned video_get_lines(){return 0;}
+unsigned video_get_cols(){return 0;}
 #endif

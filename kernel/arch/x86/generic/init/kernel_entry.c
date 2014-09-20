@@ -18,7 +18,9 @@ void kmain();
 
 /// The entry point for the x86 version of the NesOS Microkernel
 void kernel_entry(int magic, multiboot_info_t * multiboot) {
+    video_load_info((svga_mode_info_t *)multiboot->vbe_mode_info);
     console_init();
+    //~ printk("ok", (svga_mode_info_t *)multiboot->vbe_mode_info->screenheight);
     console_printdiv();
     printk("ok", NAME_S, VERSION_S);
     #ifdef DEBUG
@@ -43,7 +45,7 @@ void kernel_entry(int magic, multiboot_info_t * multiboot) {
     init_kmalloc((uintptr_t)&_kernel_end);
     printk("ok", "Starting PMM...\n");
     init_pmm((uintptr_t)&_kernel_start, multiboot->mem_upper*1024);
-    video_init((svga_mode_info_t *)multiboot->vbe_mode_info);
+    video_init();//now we can set up buffers and other stuff
     //~ multiboot_memory_map_t * mmap = (multiboot_memory_map_t*)multiboot->mmap_addr;
     //~ while ((uint32_t)mmap < (uint32_t)multiboot->mmap_addr + (uint32_t)multiboot->mmap_length) {
          //~ printf("0x%08X->0x%08X (type %d)\n",mmap->addr,mmap->len,mmap->type);

@@ -143,6 +143,10 @@ kernel/lib/liballoc.o: kernel/lib/liballoc.c .compiler_flags
 .compiler_flags: force
 	@echo '$(CFLAGS) $(ASFLAGS)' | cmp -s - $@ || echo '$(CFLAGS) $(ASFLAGS)' > $@
 
+install: kernel
+	@cp bin/kernel.elf /boot/nesos2.img
+	@grub-mkconfig -o /boot/grub/grub.cfg
+
 clean:
 	@echo "CLN    | *.o" 
 	@-find . -name "*.o" -type f -delete

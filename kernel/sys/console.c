@@ -8,20 +8,21 @@
 
 volatile uint32_t term_x;
 volatile uint32_t term_y;
+unsigned lines, cols;
 
 ///
 ///  Determines if the screen needs to be scrolled, and scrolls.
 ///
 
-void scroll() {
-    if (term_y >= 25) {
-        textmode_scroll(0, 24);
-        term_y = 24;
+inline static void scroll() {
+    if (term_y >= lines) {
+        textmode_scroll(0, lines-1);
+        term_y = lines-1;
     }
 }
 
 ///  Better than textmode_write, it formats the output at a basic level.
-void printc(unsigned char c) {
+void putchar(unsigned char c) {
     if (c == 0x08 && term_x) {
         term_x--;
     } else if (c == 0x09) {
@@ -38,7 +39,7 @@ void printc(unsigned char c) {
         textmode_write(term_x, term_y, c);
         term_x++;
     }
-    if (term_x >= 80) {
+    if (term_x >= cols) {
         term_x = 0;
         term_y++;
     }
@@ -49,16 +50,15 @@ void printc(unsigned char c) {
 }
 
 ///  Prints a basic string
-void print(const char *c) {
-    int i = 0;
-    while (c[i]) {
-        printc(c[i++]);
-    }
+inline static void print(const char *c) {
+    while(*c)
+        putchar(*c++);
 }
+
 void console_printdiv() {
     #ifndef OPT_NO_ENCHANCED_LOGGING
-    printf("------+---------------------------------");
-    printf("----------------------------------------");  // 80 lines
+    for(unsigned i=0; i<cols; i++)
+		putchar('-');
     #endif
 }
 void console_clear() {
@@ -66,22 +66,29 @@ void console_clear() {
 }
 /// Initialises the whole thing
 void console_init() {
-    #ifdef ARCHx86
 #ifdef CONSOLE_ONLY
+		lines=25, cols=80;
+		textmode_init((uint16_t*)0xB8000, lines, cols);
+#else
+		lines=video_get_lines(), cols=video_get_cols();
+		//~ lines=25, cols=80;
+		textmode_init(video_get_text_buffer(), lines, cols);
+#endif
+
+#ifdef ARCHx86
+  #ifdef CONSOLE_ONLY
         uint16_t offset;
         outb(0x3D4, 14);
         offset = inb(0x3D5) << 8;
         outb(0x3D4, 15);
         offset |= inb(0x3D5);
-        term_x = offset % 80;
-        term_y = offset / 80;
-#else
-		textmode_changedest(vga_get_text_buffer());
-#endif
-    #else
+        term_x = offset % cols;
+        term_y = offset / cols;
+   #else
         term_x = 0;
         term_y = 0;
         console_clear();
-    #endif
+  #endif
+#endif
     textmode_setcursor(term_x, term_y);
 }
