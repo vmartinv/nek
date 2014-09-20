@@ -1,7 +1,7 @@
 #include <types.h>
 #include <sys/logging.h>
 #include <sys/console.h>
-#include <nesos.h>
+#include <version.h>
 #include <stdio.h>
 #include <sys/multiboot.h>
 #include <sys/memory.h>
@@ -20,8 +20,7 @@ void kmain();
 void kernel_entry(int magic, multiboot_info_t * multiboot) {
     console_init();
     console_printdiv();
-    printk("ok", "NesOS Microkernel v.%s. (c) Martin Villagra 2014\n",
-        NESOS_VERSION_S);
+    printk("ok", NAME_S, VERSION_S);
     #ifdef DEBUG
         printk("debug", "kernel image(ram): 0x%X - 0x%X (", \
             &_kernel_start, &_kernel_end, &_kernel_end - &_kernel_start);

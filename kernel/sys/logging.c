@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <graphics/video.h>
-#include <nesos.h>
+#include <errno.h>
 #ifdef BOARDx86generic
 #include <arch/x86/textmode_console.h>
 #endif

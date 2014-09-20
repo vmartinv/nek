@@ -2,7 +2,7 @@
 #include <string.h>
 #include <sys/logging.h>
 #include <stdio.h>
-#include <nesos.h>
+#include <errno.h>
 #include <sys/syscall.h>
 #include <arch/x86/descriptor_tables.h>
 

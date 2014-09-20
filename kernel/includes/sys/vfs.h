@@ -1,5 +1,5 @@
-#ifndef CEDILLE_VFS_H
-#define CEDILLE_VFS_H
+#ifndef VFS_H
+#define VFS_H
 #include <stdint.h>
 
 #define VFS_FILE        0x01

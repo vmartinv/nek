@@ -1,5 +1,5 @@
-#ifndef CEDILLE_LOGGING_H
-#define CEDILLE_LOGGING_H
+#ifndef LOGGING_H
+#define LOGGING_H
 #include <stddef.h>
 #include <stdint.h>
 int printk(const char *title, const char *fmt, ...);

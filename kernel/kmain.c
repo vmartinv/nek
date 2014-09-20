@@ -27,6 +27,7 @@ void corazon(int color, double r, double sep){
 
 #define CLIP(x,min,max) (((x) > (max)) ? (max) : (((x) < (min)) ? (min) : (x)))
 #define N 2000
+
 void kmain()
 {
 	palette_init();

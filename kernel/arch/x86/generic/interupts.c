@@ -2,7 +2,7 @@
 #include <arch/x86/ports.h>
 #include <stdint.h>
 #include <sys/logging.h>
-#include <nesos.h>
+#include <errno.h>
 ///Table of all exception messages
 const char *exception_messages[] =
 {

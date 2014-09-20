@@ -2,7 +2,6 @@
 #include <sys/memory.h>
 #include <math.h>
 #include <string.h>
-#include <nesos.h>
 #include <stdio.h>
 #include <sys/profiler.h>
 

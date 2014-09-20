@@ -121,11 +121,11 @@ gdb:
 	@gdb --eval-command='target remote :1234' --symbols=bin/kernel.sym
 
 
-%.o: %.c compiler_flags
+%.o: %.c .compiler_flags
 	@echo " CC    |" $@
 	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
 
-%.o: %.s compiler_flags
+%.o: %.s .compiler_flags
 	@echo " AS    |" $@
 	@${AS} ${ASFLAGS} -o $@ $<
 
@@ -133,14 +133,14 @@ fdlibm/%.o: fdlibm/%.c
 	@echo " CC    |" $@
 	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-maybe-uninitialized -I${INCLUDE_DIR} -o $@ $<
 
-kernel/lib/liballoc.o: kernel/lib/liballoc.c compiler_flags
+kernel/lib/liballoc.o: kernel/lib/liballoc.c .compiler_flags
 	@echo " CC    |" $@
 	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -w -o $@ $<
 	
 
 .PHONY: clean force
 
-compiler_flags: force
+.compiler_flags: force
 	@echo '$(CFLAGS) $(ASFLAGS)' | cmp -s - $@ || echo '$(CFLAGS) $(ASFLAGS)' > $@
 
 clean:

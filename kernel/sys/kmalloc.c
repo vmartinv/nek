@@ -1,6 +1,5 @@
 #include <types.h>
 #include <sys/memory.h>
-#include <nesos.h>
 #include <sys/logging.h>
 #include <string.h>
 

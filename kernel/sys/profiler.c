@@ -32,7 +32,7 @@ void profiler_memory()
 	uint32_t free = 0;
 	textmode_setforecolor(PROFILER_C_DEBUG);
 	printf(" %04d ",0);
-	for (uintptr_t i = (uintptr_t*)&_kernel_start; i <= pmm_get_memory_bytes(); i += block_size) {
+	for (uintptr_t i = (uintptr_t)&_kernel_start; i <= pmm_get_memory_bytes(); i += block_size) {
 		int count=0;
 		bool iskernel=false;
 		for(uintptr_t j=i; j<i+block_size; j+=0x1000){

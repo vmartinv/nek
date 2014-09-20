@@ -1,7 +1,7 @@
 #include <sys/logging.h>
 #include <stdio.h>
 #include <sys/vfs.h>
-#include <nesos.h>
+#include <errno.h>
 #include <graphics/video.h>
 #include <sys/timer.h>
 #include <sys/syscall.h>

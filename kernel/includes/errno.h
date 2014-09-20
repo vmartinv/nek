@@ -17,6 +17,9 @@
 #define EDOM 5
 
 // Global symbol indicating last error
-static int errno;
+extern int errno;
+
+void panic(char *s);
+void oops(char *s);
 
 #endif
