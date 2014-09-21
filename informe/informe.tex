@@ -2,34 +2,32 @@
 \usepackage[spanish]{babel}
 \usepackage{graphicx}
 \usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage[all]{hypcap}
+\usepackage[section]{placeins}
 \def\etc{\textsl{etc}}
 \def\eg{\textsl{eg.}\ }
 \def\etal{\textsl{et al.}}
 \renewcommand\quote[1]{\lq\textsl{#1}\rq}
 \newcommand\fr[2]{{\textstyle\frac{#1}{#2}}}
-\def\name{\textsl{NesOS}}
-%
-%---------------------   end of the 'preamble'
-%
+\def\name{\textsl{*nombre todavía no pensado*}}
+
 \begin{document}
-%-----------------------------------------------------------
 \title{\name\\\large\textit{Un kernel emulador}}
 \author{Aldana Ramirez\\Martín Villagra}
 \maketitle
+\vspace{1cm}
+\centering{\includegraphics[width=\linewidth]{NES-Console-Set.jpg}}
 \vspace{\fill}
 \begin{abstract}\centering
-
-*poner una foto de la consola arriba de esto*
-
-
 El objetivo del trabajo es construir un emulador de la videoconsola Nintendo Entertaiment System(también conocida como Family) que se ejecute sin ningún sistema operativo de por medio.
 \end{abstract}
+\raggedright
 %-----------------------------------------------------------
 \tableofcontents
 %-----------------------------------------------------------
-\include{chap1}
-\include{chap2}
-%-----------------------------------------------------------
-\include{biblio}
+\include{intro}
+\include{kernel}
 %-----------------------------------------------------------
 \end{document}
