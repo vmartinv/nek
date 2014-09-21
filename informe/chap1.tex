@@ -1,0 +1,17 @@
+\chapter{Introducción}
+*algo historia de la consola, que fue la más exitosa de su época, como trascendio, que era barata,etc*
+
+*porque la elegimos: es una de las consolas mas investigadas y toqueteadas que alguna vez existio.*
+
+*modo de trabajo: se busca no reinventar la rueda, el projecto se construyo tomando como guia otros kernels y emuladores ya existentes*
+
+*la mayoría se va a hacer en c, solo se usa assembler si es necesario*
+*se asume conocimientos en c por parte del lector*
+
+\subsection{Estructuración}
+
+En un principio dividimos en dos partes principales el projecto.
+
+Una es el \textbf{emulador} propiamente dicho, es decir la que se encarga de hacer todo lo que hacía internamente la consola.
+
+La otra parte es el \textbf{kernel} encargada de inicializar todo lo necesario para que el emulador funcione, así como proveerle funciones de bajo nivel tales como escribir en pantalla o reservar memoria. Al no tener un sistema operativo detrás, funciones como malloc y free que cualquier programador de C supone siempre presentes deben ser implementadas por el kernel.
