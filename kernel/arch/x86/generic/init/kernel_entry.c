@@ -13,7 +13,6 @@ extern uint32_t _kernel_start, _kernel_end;
 int x86_init_descriptor_tables();
 void pit_install(uint32_t frequency);
 
-void dmain();
 void kmain();
 
 /// The entry point for the x86 version of the NesOS Microkernel
@@ -53,7 +52,6 @@ void kernel_entry(int magic, multiboot_info_t * multiboot) {
     //~ }
     printk("debug", "Exiting Boot\n");
     console_printdiv();
-    dmain();
     kmain();
     return;
 }

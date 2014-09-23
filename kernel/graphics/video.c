@@ -80,6 +80,7 @@ void video_clear(){
 	memset(nesscreenbase, 0, nesscreensize);
 }
 
+
 //this handles pixels coming directly from the nes engine
 void video_updatepixel(int line,int pixel,u8 s){
 	if(!initialized) return;
@@ -94,6 +95,11 @@ void video_updatepixel(int line,int pixel,u8 s){
 
 inline static u8 *go_offset(u8 *ptr, int x, int y){
 	return ptr+x*screendepth+y*screenbytesPerLine;
+}
+
+void video_updatepixel_raw(int y,int x,u32 c){
+	if(!initialized) return;
+	setpixel(go_offset(screenbase, x, y), c);
 }
 
 int offsetx, offsety;
@@ -147,12 +153,13 @@ void video_init() {
 	offsety=(screenheight-NES_HEIGHT*2)/2;
 	offsetx=(screenwidth-NES_WIDTH*2)/2;
 	video_clear();
+	palette_init();
 	initialized=true;
 }
 
-//~ int video_getwidth()		{	return(screenwidth);		}
-//~ int video_getheight()		{	return(screenheight);		}
-//~ int video_getbpp()			{	return(screendepth*8);		}
+int video_getwidth()		{	return(screenwidth);		}
+int video_getheight()		{	return(screenheight);		}
+int video_getbpp()			{	return(screendepth*8);		}
 #else
 void video_init(svga_mode_info_t *svga_mode_info){}
 void video_show_frame(){}

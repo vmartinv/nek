@@ -63,6 +63,8 @@ void console_printdiv() {
 }
 void console_clear() {
     textmode_clear();
+    term_x = term_y = 0;
+    textmode_setcursor(0, 0);
 }
 /// Initialises the whole thing
 void console_init() {
@@ -85,8 +87,7 @@ void console_init() {
         term_x = offset % cols;
         term_y = offset / cols;
    #else
-        term_x = 0;
-        term_y = 0;
+        term_x = term_y = 0;
         console_clear();
   #endif
 #endif

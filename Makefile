@@ -49,6 +49,10 @@ EMU := qemu-system-i386
 #--------------------------------------------
 FDLIBM_FILES := $(patsubst %.c,%.o,$(wildcard fdlibm/*.c))
 
+program ?= kbd_test
+MAIN_FILES := $(patsubst %.c,%.o,$(wildcard ${program}/*.c))
+
+
 GLOBAL_ROOT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/*.c))
 GLOBAL_SYS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/sys/*.c))
 GLOBAL_INIT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/init/*.c))
@@ -74,11 +78,11 @@ BOARD_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/li
 BOARD_BOOTSTRP_FILES := $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/${BOARD}/bootstrap/*.c))
 
 #Canonicate them together
-GLOBAL_FILES := ${GLOBAL_ROOT_FILES} ${GLOBAL_SYS_FILES} ${GLOBAL_INIT_FILES} ${GLOBAL_DRIVERS_FILES} ${GLOBAL_LOW_FILES} ${GLOBAL_FS_FILES} ${GLOBAL_LIB_FILES} ${GLOBAL_TEST_FILES} ${GLOBAL_GRAPHICS_FILES}
+GLOBAL_FILES :=  ${FDLIBM_FILES} ${GLOBAL_ROOT_FILES} ${GLOBAL_SYS_FILES} ${GLOBAL_INIT_FILES} ${GLOBAL_DRIVERS_FILES} ${GLOBAL_LOW_FILES} ${GLOBAL_FS_FILES} ${GLOBAL_LIB_FILES} ${GLOBAL_TEST_FILES} ${GLOBAL_GRAPHICS_FILES} ${MAIN_FILES}
 ARCH_FILES := ${ARCH_ROOT_FILES} ${ARCH_DRIVERS_FILES} ${ARCH_LOW_FILES} ${ARCH_FS_FILES} ${ARCH_LIB_FILES} ${ARCH_TEST_FILES}
 BOARD_FILES :=${BOARD_ROOT_FILES} ${BOARD_INIT_FILES} ${BOARD_DRIVER_FILES} ${BOARD_LOW_FILES} ${BOARD_FS_FILES} ${BOARD_LIB_FILES} ${BOARD_TEST_FILES}
 
-ALL_SOURCE_FILES := ${GLOBAL_FILES} ${ARCH_FILES} ${BOARD_FILES} ${FDLIBM_FILES}
+ALL_SOURCE_FILES := ${ARCH_FILES} ${BOARD_FILES} ${GLOBAL_FILES}
 
 #RULES
 #--------------------------------------------
@@ -95,7 +99,7 @@ arch: ${ARCH_FILES}
 
 board: ${BOARD_FILES}
 
-kernel: bin-dir ${GLOBAL_FILES} fdlibm arch board
+kernel: bin-dir ${ALL_SOURCE_FILES} fdlibm arch board
 	@echo " LD [K]| kernel.elf"
 	@${LD} ${LFLAGS} -T ${LD_SCRIPT} -o bin/kernel.elf $(ALL_SOURCE_FILES)
 ifeq ($(debug), 1)
@@ -152,8 +156,9 @@ clean:
 	@-find . -name "*.o" -type f -delete
 	@echo "CLN    | *.elf" 
 	@-find . -name "*.elf" -type f -delete
-	@echo "CLN    | bin/*" 
+	@echo "CLN    | bin" 
 	@rm -f bin/*
+	@rmdir bin
 	@echo "CLN    | compiler_flags" 
 	@rm -f compiler_flags
 	@rm -f iso/boot/nesos2.img
