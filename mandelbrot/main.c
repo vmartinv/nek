@@ -18,12 +18,6 @@ int main()
 	int iter=10;
 	double zoom=2;
 
-	/* Read in the initial data */
-	//~ printf("Enter xstart, xend, ystart, yend, iterations: ");
-	//~ if (scanf("%lf%lf%lf%lf%d", &xstart, &xend, &ystart, &yend, &iter) != 5){
-		//~ printf("Error!\n");
-		//~ exit(1);
-	//~ }
 
 	/* these are used for calculating the points corresponding to the pixels */
 	while(true){
@@ -90,6 +84,11 @@ int main()
 			case 'c':
 				iter+=10;
 				break;
+			case 'r':
+				iter=10;
+				zoom=2;
+				xstart=-1, ystart=-1;
+				break;
 			case 'h':
 				console_clear();
 				textmode_setforecolor(6);
@@ -108,6 +107,10 @@ int main()
 				printf("h");
 				textmode_setforecolor(0x7);
 				printf(": esta ayuda\n");
+				textmode_setforecolor(4);
+				printf("r");
+				textmode_setforecolor(0x7);
+				printf(": reiniciar\n");
 				textmode_setforecolor(0x7);
 				printf("Presione ");
 				textmode_setforecolor(5);
