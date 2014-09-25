@@ -18,6 +18,10 @@ void init_kmalloc(uintptr_t kernelend)
 	pre_placementaddr = kernelend;
 	kmalloc_status = 0;
 }
+void disable_kmalloc()
+{
+	kmalloc_status=1;
+}
 
 uintptr_t * kmalloc(size_t sz)
 {

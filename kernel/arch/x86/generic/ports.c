@@ -29,3 +29,14 @@ uint16_t inw(uint16_t port)
 	asm volatile("inw %w1, %0" : "=a" (ret) : "dN" (port));
 	return ret;
 }
+
+///Inputs a word from port
+void insw(uint16_t port, void *addr, unsigned long count)
+{
+  __asm__ __volatile__ (
+    "cld ; rep ; insw "
+    : "=D" (addr), "=c" (count)
+    : "d"(port), "0"(addr), "1" (count)
+    : "memory"
+  );
+}

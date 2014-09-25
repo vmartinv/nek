@@ -5,6 +5,7 @@
 void init_kmalloc(uintptr_t kernelend);
 uintptr_t * kmalloc(size_t sz);
 uintptr_t kmalloc_get_pre_placementaddr();
+void disable_kmalloc();
 
 void init_pmm(intptr_t kernelstart, size_t upper_b);
 uint32_t pmm_get_memory_bytes();

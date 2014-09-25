@@ -173,4 +173,5 @@ void init_pmm(intptr_t kernelstart, size_t upper_b)
 	space_left=upper_b+kernelstart-offset;
 	bitmap_sz =space_left/PAGE_SIZE/32;
 	memset(bitmap, 0, sizeof(uint32_t)*bitmap_sz);//set all pages free
+	disable_kmalloc();
 }

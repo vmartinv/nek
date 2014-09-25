@@ -60,7 +60,8 @@ void cycle_timers()
 
 void sleep(uint32_t ticks){
 	uint32_t end=elapsed+ticks;
-	while(elapsed<end);
+	int dummy;
+	while(elapsed<end) dummy++;//why? maybe qemu bug TODO: check
 }
 
 static int test_timer(int id)

@@ -113,12 +113,17 @@ iso: kernel
 	@echo "ISO [A]| bin/cd.iso"
 	@cp bin/kernel.elf iso/boot/nesos2.img
 	@grub-mkrescue iso -o bin/cd.iso
+	
+installtodisk: kernel
+	@(mount | grep mount > /dev/null) || echo montame plis
+	@cp bin/kernel.elf mount/nesos2.img
+	@sync
 
-run: iso
+run: installtodisk
 ifeq ($(debug), 1)
-	@${EMU} -s -S -m 25 -serial stdio -cdrom bin/cd.iso
+	@${EMU} -s -S -m 25 -serial stdio -hda disk.img
 else
-	@${EMU} -m 25 -serial stdio -cdrom bin/cd.iso
+	@${EMU} -m 25 -serial stdio -hda disk.img
 endif
 
 gdb:

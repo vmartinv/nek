@@ -54,7 +54,6 @@ uint8_t kbdus[128] =
     0,	/* All other keys are undefined */ 
 };
 
-void kbd_handler(registers_t *regs);
 static uint8_t keydown[256];
 static uint8_t buffer[256];
 static size_t szbuf = 0;

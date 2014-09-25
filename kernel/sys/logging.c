@@ -12,7 +12,7 @@ Logs output to system console. Works as an enchanced printf.
 @param[in] ...  Any paramaters to pass
 **/
 
-#ifndef DEBUG
+#ifdef HIDE_DEBUG_LOG
 	#define DEBUG_ONLY_LOG return;
 #else
 	#define DEBUG_ONLY_LOG

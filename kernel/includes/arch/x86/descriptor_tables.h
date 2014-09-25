@@ -1,6 +1,8 @@
 #ifndef ARCH_X86_TABLES_H
 #define ARCH_X86_TABLES_H
-#include <stdint.h>
+#include <types.h>
+#include <arch/x86/regs.h>
+
 ///A gdt entry
 struct gdt_entry
 {
@@ -69,14 +71,7 @@ extern void isr29();
 extern void isr30();
 extern void isr31();
 extern void isr100();
-struct regs
-{
-	unsigned int gs, fs, es, ds;      /* pushed the segs last */
-	unsigned int edi, esi, ebp, useless_value, ebx, edx, ecx, eax;  /* pushed by pusha. useless value is esp */
-	unsigned int int_no, err_code;    /* our 'push byte #' and ecodes do this */
-	unsigned int eip, cs, eflags, useresp, ss;   /* pushed by the processor automatically */ 
-};
-typedef struct regs registers_t;
+
 
 #define IRQ0 32
 #define IRQ1 33

@@ -1,7 +1,9 @@
+.compiler_flags
 *.o
 bin/*
-doc/*
+doc
 iso/boot/*.img
 informe/*.swp
 informe/*.aux
 informe/*~
+mount

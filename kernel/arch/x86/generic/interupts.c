@@ -52,7 +52,7 @@ interrupt_handler_t interrupt_handlers [256];
 	unsigned int eip, cs, eflags, useresp, ss; //pushed by the processor automatically
 */
 //Handles interrupts
-extern void fault_handler(struct regs *r)
+extern void fault_handler(registers_t *r)
 {
 	if (interrupt_handlers[r->int_no] != 0)
 		interrupt_handlers[r->int_no] (r);
@@ -117,7 +117,7 @@ void irq_install()
 	return;
 }
 ///Handles IRQ's
-void irq_handler(struct regs *r)
+void irq_handler(registers_t *r)
 {
 	/* This is a blank function pointer */
 	if (interrupt_handlers[r->int_no] != 0){
