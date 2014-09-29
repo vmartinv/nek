@@ -22,4 +22,11 @@ extern int errno;
 void panic(char *s);
 void oops(char *s);
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+#define AT __FILE__ ":" TOSTRING(__LINE__)
+
+#define PANIC(msg) panic(msg" in "__FILE__", at "__LINE__)
+#define ASSERT(b) ((b) ? (void)0 : panic("assertion "AT))
+
 #endif

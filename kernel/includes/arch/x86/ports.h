@@ -1,21 +1,74 @@
 #ifndef ARCH_X86_PORTS_H
 #define ARCH_X86_PORTS_H
 #include <stdint.h>
-///Exports a byte
-void outb(uint16_t port, uint8_t value);
-///Exports a word
-void outw(uint16_t port, uint16_t value);
-///Exports a long
-void outl(uint16_t port, uint32_t value);
-///Imports a byte
-uint8_t inb(uint16_t port);
-///Imports a word
-uint16_t inw(uint16_t port);
 ///Imports signed words
-void insw(uint16_t port, void *addr, unsigned long count);
-///Imports a long
-uint32_t inl(uint16_t port);
+static inline void insw(uint16_t port, void *addr, unsigned long count)
+{
+  __asm__ __volatile__ (
+    "cld ; rep ; insw "
+    : "=D" (addr), "=c" (count)
+    : "d"(port), "0"(addr), "1" (count)
+    : "memory"
+  );
+}
 
+
+/*
+ * Write a byte to system IO port
+ */
+static inline void outb(uint16_t port, uint8_t val) {
+	__asm__ volatile("outb %0, %1" : : "a"(val), "Nd"(port));
+}
+
+/*
+ * Read a byte from a system IO port
+ */
+static inline uint8_t inb(uint16_t port) {
+	uint8_t ret;
+	__asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
+	return ret;
+}
+
+/*
+ * Write a word to system IO port
+ */
+static inline void outw(uint16_t port, uint16_t val) {
+	__asm__ volatile("outw %0, %1" : : "a"(val), "Nd"(port));
+}
+
+/*
+ * Read a word from a system IO port
+ */
+static inline uint16_t inw(uint16_t port) {
+	uint16_t ret;
+	__asm__ volatile("inw %1, %0" : "=a"(ret) : "Nd"(port));
+	return ret;
+}
+
+/*
+ * Write a dword to system IO port
+ */
+static inline void outl(uint16_t port, uint32_t val) {
+	__asm__ volatile("outl %0, %1" : : "a"(val), "Nd"(port));
+}
+
+/*
+ * Read a dword from a system IO port
+ */
+static inline uint32_t inl(uint16_t port) {
+	uint32_t ret;
+	__asm__ volatile("inl %1, %0" : "=a"(ret) : "Nd"(port));
+	return ret;
+}
+
+/*
+ * Wait for a system IO operation to complete.
+ */
+static inline void io_wait(void) {
+	// port 0x80 is used for 'checkpoints' during POST.
+	// The Linux kernel seems to think it is free for use
+	__asm__ volatile("outb %%al, $0x80" : : "a"(0));
+}
 
 
 #define PIC1		0x20
