@@ -131,4 +131,5 @@ typedef struct ext2_fs_info {
 } ext2_fs_info_t;
 
 ext2_fs_info_t* ext2_init_fs(partition_info_t* p);
+fs_node_t* ext2_root_node(ext2_fs_info_t *info);
 #endif

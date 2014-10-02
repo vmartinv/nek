@@ -9,7 +9,7 @@ unsigned int write(fs_node_t*,unsigned int,unsigned int,char*);
 void open(fs_node_t*);
 void close(fs_node_t*);
 struct dirent* ext2_readdir(struct fs_node* node, unsigned int index);
-fs_node_t* finddir(fs_node_t *node, char *name);
+fs_node_t* finddir(fs_node_t *node, const char *name);
 
 ext2_superblock_t* ext2_parse_superblock(char *buff) {
   ext2_superblock_t *info =
@@ -31,7 +31,7 @@ ext2_bgd_entry_t* ext2_parse_bgd(char *buff) {
   ext2_bgd_entry_t *bgde =
     (ext2_bgd_entry_t*)malloc(sizeof(ext2_bgd_entry_t));
   memcpy(bgde, buff, sizeof(ext2_bgd_entry_t));
-  printf("block usage: %d, inode usage: %d, directories:%d\n",
+  printk("ext2", "block usage: %d, inode usage: %d, directories:%d\n",
          bgde->block_usage_bmap,
          bgde->inode_usage_bmap,
          (int)bgde->directories);
@@ -238,7 +238,7 @@ struct dirent* ext2_readdir(struct fs_node* node, unsigned int index) {
   return entry;
 }
 
-fs_node_t* finddir(fs_node_t *node, char *name) {
+fs_node_t* finddir(fs_node_t *node, const char *name) {
   ext2_fs_info_t *info = (ext2_fs_info_t*)node->fs;
   fs_node_t* dir_node = node;
   struct dirent *curr_dirent;// = node->readdir(dir_node, 0);

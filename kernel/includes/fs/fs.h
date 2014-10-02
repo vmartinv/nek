@@ -1,6 +1,6 @@
 #ifndef FS_H
 #define FS_H
-
+#include <types.h>
 #include <arch/x86/lba.h>
 
 #define FS_TYPE_EXT2  0x83
@@ -24,7 +24,7 @@
 #define SEEK_CUR 1
 #define SEEK_END -1
 typedef struct partition_info {
-  char active;
+  bool active;
   char start_head;
   char start_sector;
   unsigned short start_cylinder;
@@ -47,7 +47,7 @@ typedef unsigned int (*write_type_t)(struct fs_node*,unsigned int,unsigned int,c
 typedef void (*open_type_t)(struct fs_node*);
 typedef void (*close_type_t)(struct fs_node*);
 typedef struct dirent * (*readdir_type_t)(struct fs_node*,unsigned int);
-typedef struct fs_node * (*finddir_type_t)(struct fs_node*,char *name);
+typedef struct fs_node * (*finddir_type_t)(struct fs_node*,const char *name);
 
 typedef struct file {
   unsigned short mode;
@@ -94,7 +94,7 @@ unsigned int fs_write(fs_node_t *node, unsigned int offset, unsigned int size, c
 void fs_open(fs_node_t *node, unsigned char read, unsigned char write);
 void fs_close(fs_node_t *node);
 struct dirent *fs_readdir(fs_node_t *node, unsigned int index);
-fs_node_t *fs_finddir(fs_node_t *node, char *name);
+fs_node_t *fs_finddir(fs_node_t *node, const char *name);
 
 dir_t* opendir(char *path);
 struct dirent* readdir(dir_t *d);

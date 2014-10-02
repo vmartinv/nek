@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <types.h>
 #include <sys/timer.h>
 #include <stdlib.h>
 #include <arch/x86/lba.h>
@@ -6,7 +7,7 @@
 #include <arch/x86/regs.h>
 #include <arch/x86/ports.h>
 
-#define IO_DELAY()        do{inb(0x80); inb(0x80); inb(0x80); inb(0x80);}while(0)
+#define IO_DELAY()        inb(0x80), inb(0x80), inb(0x80), inb(0x80)
 
 lba_drive_t *drives[4];
 
@@ -27,7 +28,7 @@ static inline void wait_for_data(int offset) {
 
 }
 
-static void send_rw_command(int command, unsigned short count, lba_drive_t* drive, uint64_t address){
+static void send_rw_command(int command, uint16_t count, lba_drive_t* drive, uint64_t address){
 
   unsigned short offset = drive->bus == PRIMARY ? 0 : LBA_S_OFFSET,
     slavebit = drive->type == MASTER ? 0 : 1,
@@ -39,22 +40,54 @@ static void send_rw_command(int command, unsigned short count, lba_drive_t* driv
   IO_DELAY();
 
   outb(LBA_SECTOR_COUNT_PORT + offset, count >> 8);
-  outb(LBA_0_BLOCK_ADDR_PORT + offset, (unsigned char) (address >> 24) & 0xff);
-  outb(LBA_1_BLOCK_ADDR_PORT + offset, (unsigned char) (address >> 32) & 0xff);
-  outb(LBA_2_BLOCK_ADDR_PORT + offset, (unsigned char) (address >> 40) & 0xff);
+  outb(LBA_0_BLOCK_ADDR_PORT + offset, (address >> 24) & 0xff);
+  outb(LBA_1_BLOCK_ADDR_PORT + offset, (address >> 32) & 0xff);
+  outb(LBA_2_BLOCK_ADDR_PORT + offset, (address >> 40) & 0xff);
   outb(LBA_SECTOR_COUNT_PORT + offset, count & 0xff);
-  outb(LBA_0_BLOCK_ADDR_PORT + offset, (unsigned char) address & 0xff);
-  outb(LBA_1_BLOCK_ADDR_PORT + offset, (unsigned char) (address >> 8) & 0xff);
-  outb(LBA_2_BLOCK_ADDR_PORT + offset, (unsigned char) (address >> 16) & 0xff);
+  outb(LBA_0_BLOCK_ADDR_PORT + offset, address & 0xff);
+  outb(LBA_1_BLOCK_ADDR_PORT + offset, (address >> 8) & 0xff);
+  outb(LBA_2_BLOCK_ADDR_PORT + offset, (address >> 16) & 0xff);
 
   outb(LBA_COMMAND_PORT + offset, command);
-  IO_DELAY();
+}
+
+bool poll(){
+	/*
+.lp1:
+	in al, dx		; grab a status byte
+	test al, 0x80		; BSY flag set?
+	jne short .retry
+	test al, 8		; DRQ set?
+	jne short .data_rdy
+.retry:
+	dec ecx
+	jg short .lp1
+; need to wait some more -- loop until BSY clears or ERR sets (error exit if ERR sets)
+ 
+.pior_l:
+	in al, dx		; grab a status byte
+	test al, 0x80		; BSY flag set?
+	jne short .pior_l	; (all other flags are meaningless if BSY is set)
+	test al, 0x21		; ERR or DF set?
+	jne short .fail*/
+	uint16_t dx=0;
+	for(int i=0; i<4; i++){
+		asm ("movw %%dx,%0" : "=a" (dx) : );
+		if(!(dx&0x80) && (dx&8)) return true;
+	}
+	uint16_t errmask=(1<<5) | (1<<0);
+	do{
+		asm ("movw %%dx,%0" : "=a" (dx) : );
+		if(dx&0x80 && dx&errmask) return false;
+	}while(!(dx&0x80));
+	return true;
 }
 
 int lba_read_sectors(lba_drive_t* drive, unsigned long address, unsigned short count, unsigned char *buff) {
   send_rw_command(LBA_READ_COMMAND_EXT, count, drive, address);
   unsigned short offset = drive->bus == PRIMARY ? 0 : LBA_S_OFFSET;
   int i;
+ // poll();
   unsigned char response;
   do{
     response = inb(LBA_COMMAND_PORT + offset);
@@ -62,10 +95,12 @@ int lba_read_sectors(lba_drive_t* drive, unsigned long address, unsigned short c
   for (i = 0; i < count; i++) {
     while(!(inb(LBA_COMMAND_PORT + offset) & LBA_STATUS_DRIVE_READY));
     //wait_for_data(offset);
+	//poll();
+    
     do {
       response = inb(LBA_COMMAND_PORT + offset);
       if ((response & LBA_STATUS_ERROR) || (response & LBA_STATUS_DRIVE_FAULT)) {
-        printf("disk error reading 0x%x: %b\n", address, response);
+        printf("disk error reading 0x%x: %d\n", address, (int)response);
         return 0;
       }
     } while(!(response & LBA_STATUS_DATA_READY));

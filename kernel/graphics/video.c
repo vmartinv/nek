@@ -161,7 +161,8 @@ int video_getwidth()		{	return(screenwidth);		}
 int video_getheight()		{	return(screenheight);		}
 int video_getbpp()			{	return(screendepth*8);		}
 #else
-void video_init(svga_mode_info_t *svga_mode_info){}
+void video_init(){}
+void video_load_info(svga_mode_info_t *svga_mode_info){}
 void video_show_frame(){}
 void video_show_console(){}
 void video_updatepixel(int line,int pixel,u8 s){}

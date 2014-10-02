@@ -115,7 +115,7 @@ iso: kernel
 	@grub-mkrescue iso -o bin/cd.iso
 	
 installtodisk: kernel
-	@(mount | grep mount > /dev/null) || echo montame plis
+	@(mount | grep mount > /dev/null) || (sudo losetup -f -o 32256 --sizelimit 33521664 disk.img && sudo mount /dev/loop0 mount)
 	@cp bin/kernel.elf mount/nesos2.img
 	@sync
 

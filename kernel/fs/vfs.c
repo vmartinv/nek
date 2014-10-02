@@ -3,8 +3,8 @@
 #include <sys/logging.h>
 #include <sys/memory.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <types.h>
+#include <stdio.h>
 #include <string.h>
 tree_t * vfs_tree; 
 vfs_node_t * vfs_root;
