@@ -4,9 +4,10 @@
 #include <sys/timer.h>
 #include <sys/syscall.h>
 #include <sys/task.h>
-#include <fs/disk.h>
-#include <fs/mbr.h>
-#include <fs/vfs.h>
+//~ #include <fs/disk.h>
+//~ #include <fs/mbr.h>
+//~ #include <fs/vfs.h>
+#include <arch/x86/lba.h>
 void kbd_init();
 
 int start_service(char *daemon,int essential,int (*func)())
@@ -32,9 +33,9 @@ void kmain()
 	//~ start_service("kvfsd",0,init_vfs);
 	//start_service("filesystemd",1,init_fs);
 	start_service("timerd",1,init_timer);
-	
+	verify_DPT();
 		// Disk test
-	disk_t *hda0 = disk_allocate();
+	/*disk_t *hda0 = disk_allocate();
 	hda0->bus = 0;
 	hda0->drive_id = 0;
 	ata_driver_init(hda0);
@@ -55,6 +56,6 @@ void kmain()
 		//~ kprintf("\nParsed ELF to 0x%X\n", elf);
 //~ 
 		//~ i386_task_t* task = task_allocate(elf);
-	}
+	}*/
 	main();
 }

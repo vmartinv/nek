@@ -70,6 +70,13 @@ static inline void io_wait(void) {
 	__asm__ volatile("outb %%al, $0x80" : : "a"(0));
 }
 
+#define insl(port, nr, buf) \
+__asm__ ("cld;rep;insl\n\t"	\
+::"d"(port), "D"(buf), "c"(nr))
+
+#define outsl(port, nr, buf) \
+__asm__ ("cld;rep;outsl\n\t"	\
+::"d"(port), "S" (buf), "c" (nr))
 
 #define PIC1		0x20
 #define PIC2		0xA0
