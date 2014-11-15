@@ -94,14 +94,14 @@ void hashmap_release(hashmap_t* map) {
  */
 void hashmap_insert(hashmap_t* hashmap, void* key, void* value) {
 	// Create a copy of the key.
-	size_t keyLength = strlen(key);
+	size_t keyLength = strlen((const char *)key);
 	void* keyCopy = (void *) malloc(keyLength+1);
 
 	memset(keyCopy, 0, keyLength+1);
 	memcpy(keyCopy, key, keyLength);
 
 	// Calculate hash
-	uint32_t hash = default_hash(keyCopy, keyLength);
+	uint32_t hash = default_hash((char*)keyCopy, keyLength);
 	hash &= hashmap->mask;
 
 	// Locate the bucket in the hashmap.
@@ -136,7 +136,7 @@ void hashmap_insert(hashmap_t* hashmap, void* key, void* value) {
 		// Search through the data structures instead.
 		while(likely(data != NULL)) {
 			if(data->key == NULL) {
-				emptyData = value;
+				emptyData = (hashmap_data_t*)value;
 			}
 
 			// Do the keys match?
@@ -176,8 +176,8 @@ void hashmap_insert(hashmap_t* hashmap, void* key, void* value) {
  */
 void* hashmap_get(hashmap_t* hashmap, void* key) {
 	// Calculate hash
-	size_t keyLength = strlen(key);
-	uint32_t hash = default_hash(key, keyLength);
+	size_t keyLength = strlen((char*)key);
+	uint32_t hash = default_hash((char*)key, keyLength);
 	hash &= hashmap->mask;
 
 	// Locate the bucket in the hashmap.
@@ -210,8 +210,8 @@ void* hashmap_get(hashmap_t* hashmap, void* key) {
  */
 int hashmap_delete(hashmap_t* hashmap, void* key) {
 	// Calculate hash
-	size_t keyLength = strlen(key);
-	uint32_t hash = default_hash(key, keyLength);
+	size_t keyLength = strlen((char*)key);
+	uint32_t hash = default_hash((char*)key, keyLength);
 	hash &= hashmap->mask;
 
 	// Locate the bucket in the hashmap.

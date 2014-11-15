@@ -1,4 +1,8 @@
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* @(#)fdlibm.h 1.5 04/04/22 */
 /*
  * ====================================================
@@ -72,7 +76,7 @@ extern  _LIB_VERSION_TYPE  _LIB_VERSION;
 
 struct exception {
 	int type;
-	char *name;
+	const char *name;
 	double arg1;
 	double arg2;
 	double retval;
@@ -220,3 +224,7 @@ extern double __kernel_sin __P((double,double,int));
 extern double __kernel_cos __P((double,double));
 extern double __kernel_tan __P((double,double,int));
 extern int    __kernel_rem_pio2 __P((double*,double*,int,int,int,const int*));
+
+#ifdef __cplusplus
+}
+#endif

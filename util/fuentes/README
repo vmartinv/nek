@@ -1,0 +1,7 @@
+Este fue el procedimiento para generar la fuente de la consola:
+
+1. Se descargo de internet la fuente deseada (formato ttf)
+2. Se creo una imagen conteniendo todos los caracteres en una cuadricula (en formato xfc)
+3. Se exporto la imagen a formado RAW(.data)
+4. Se hizo makearray.cpp, que carga la imagen y para cada fila calcula una mascara de bits de sus pixeles y las muestra como un arreglo de C
+5. El arreglo se agrega al codigo fuente del kernel. (graphics/rsrc/nesfont.h, included in graphics/video.c)

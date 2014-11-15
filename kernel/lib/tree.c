@@ -6,7 +6,7 @@
 #include <stdlib.h>
 tree_t * tree_create(void) {
 	/* Create a new tree */
-	tree_t * out = malloc(sizeof(tree_t));
+	tree_t * out = (tree_t *) malloc(sizeof(tree_t));
 	out->nodes  = 0;
 	out->root   = NULL;
 	return out;
@@ -38,7 +38,7 @@ void tree_node_free(tree_node_t * node) {
 	/* Free a node and its children, but not their contents */
 	if (!node) return;
 	foreach(child, node->children) {
-		tree_node_free(child->value);
+		tree_node_free((tree_node_t *)child->value);
 	}
 	free(node);
 }
@@ -50,7 +50,7 @@ void tree_free(tree_t * tree) {
 
 tree_node_t * tree_node_create(void * value) {
 	/* Create a new tree node pointing to the given value */
-	tree_node_t * out = malloc(sizeof(tree_node_t));
+	tree_node_t * out = (tree_node_t *)malloc(sizeof(tree_node_t));
 	out->value = value;
 	out->children = list_create();
 	out->parent = NULL;

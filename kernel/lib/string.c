@@ -106,7 +106,7 @@ char* strsep(char **stringp, const char *delim) {
  * together for a case independent comparison. The mappings are
  * based upon ASCII character sequences.
  */
-static const unsigned char strcasecmp_charmap[] = {
+static const char strcasecmp_charmap[] = {
 	'\000', '\001', '\002', '\003', '\004', '\005', '\006', '\007',
 	'\010', '\011', '\012', '\013', '\014', '\015', '\016', '\017',
 	'\020', '\021', '\022', '\023', '\024', '\025', '\026', '\027',
@@ -146,8 +146,8 @@ static const unsigned char strcasecmp_charmap[] = {
  * otherwise identically to strcmp.
  */
 int strcasecmp(const char *s1, const char *s2) {
-	const unsigned char *cm = strcasecmp_charmap,
-			*us1 = (const unsigned char *) s1,
+	const char *cm = strcasecmp_charmap;
+	const unsigned char	*us1 = (const unsigned char *) s1,
 			*us2 = (const unsigned char *) s2;
 
 	while (cm[*us1] == cm[*us2++]) {
@@ -167,8 +167,8 @@ int strcasecmp(const char *s1, const char *s2) {
  */
 int strncasecmp(const char *s1, const char *s2, size_t n) {
 	if (n != 0) {
-		const unsigned char *cm = strcasecmp_charmap,
-				*us1 = (const unsigned char *) s1,
+		const char *cm = strcasecmp_charmap;
+		const unsigned char	*us1 = (const unsigned char *) s1,
 				*us2 = (const unsigned char *) s2;
 
 		do {
@@ -249,8 +249,8 @@ void *memset(void *dest,int val,size_t n) {
 void memmove(void *dest, const void *src, size_t n)
 {
 	size_t i;
-	unsigned char *a = dest;
-	const unsigned char *b = src;
+	char *a = (char*)dest;
+	const char *b =(const char*) src;
 
 	if(src < dest)
 	{

@@ -2,6 +2,9 @@
 #define ARCH_X86_TEXTMODE_CONSOLE_H
 #include <types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void textmode_init(uint16_t *buffer, unsigned alines, unsigned acols);
 
 ///Write a char to the screen
@@ -21,4 +24,9 @@ void textmode_setforecolor(uint8_t fore);
 void textmode_resetcolor();
 void textmode_changedest(uint16_t *newdest);
 void textmode_clear();
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif

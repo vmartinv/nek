@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <sys/logging.h>
 #include <errno.h>
+#if defined(__cplusplus)
+extern "C" { /* Use C linkage. */
+#endif
 ///Table of all exception messages
 const char *exception_messages[] =
 {
@@ -68,6 +71,7 @@ extern void fault_handler(registers_t *r)
 }
 
 /** This installs a custom IRQ handler for the given IRQ **/
+
 void register_interrupt_handler (uint8_t n, interrupt_handler_t h)
 {
 	interrupt_handlers [n] = h;
@@ -137,3 +141,7 @@ void irq_handler(registers_t *r)
 	*  interrupt controller too */
 	outb(0x20, 0x20);
 }
+
+#if defined(__cplusplus)
+}
+#endif

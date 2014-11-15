@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include <graphics/palette.h>
 #include <graphics/video.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "ntsc/palette.h"
 
 typedef struct {
 	int x,y;
@@ -19,7 +19,7 @@ void corazon(int color, double r, double sep){
 		p->x=(16*sin(t)*sin(t)*sin(t))*r, p->y=(13*cos(t)-5*cos(2*t)-2*cos(3*t)-cos(4*t))*r ;
 		p->y=-p->y;
 		p->x+=NES_WIDTH/2, p->y+=NES_HEIGHT/2;
-		video_updatepixel(p->y, p->x, color);
+		video_updatepixel(p->y*NES_WIDTH+p->x, palette_get_value(color));
 	}
 }
 
@@ -28,6 +28,7 @@ void corazon(int color, double r, double sep){
 
 int main()
 {
+	palette_init();
 	srand(345345);
 	while(1){
 		double r=0;
@@ -43,7 +44,7 @@ int main()
 		}
 		while(sz){
 			pto *p=&st[--sz];
-			video_updatepixel(p->y, p->x, GETINDEX_COLOR(13,0));
+			video_updatepixel(p->y*NES_WIDTH+p->x, palette_get_value(GETINDEX_COLOR(13,0)));
 			if(!(sz%(1000)) && sz>200)
 					video_show_frame();
 		}

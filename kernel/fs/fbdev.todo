@@ -1,14 +1,11 @@
 #include <types.h>
-#include <sys/vfs.h>
+#include <fs/vfs.h>
 #include <string.h>
 #include <stdlib.h>
 #define FBDEV_SIZE 80 * 25
-uint8_t * vfb_ptr[6];
 
 uint32_t fbdev_read(vfs_node_t *node, uint32_t offset, uint32_t size, uint8_t *buffer)
 {
-	//Offset is the term number. Size is how much data, and buffer is well, the data.
-	
 	return 0;
 }
 
@@ -34,8 +31,7 @@ vfs_node_t * fbdev_create(int term)
 	node->read = (read_type_t)&fbdev_read;
 	node->write = (write_type_t)&fbdev_write;
 	node->ioctl = (ioctl_type_t)&fbdev_ioctl;
-	
-	vfb_ptr[term] = malloc(FBDEV_SIZE);
+	node->internal=malloc(FBDEV_SIZE);
 	return node;
 }
 

@@ -1,6 +1,6 @@
 #ifndef VFS_H
 #define VFS_H
-#include <stdint.h>
+#include <types.h>
 
 #define VFS_FILE        0x01
 #define VFS_DIRECTORY   0x02
@@ -19,23 +19,15 @@
 #define PATH_UP  ".."
 #define PATH_DOT "."
 
-typedef struct dirent // One of these is returned by the readdir call, according to POSIX.
-{
-	char name[128]; // Filename.
-	uint32_t ino;     // Inode number. Required by POSIX.
-} vfs_dirent_t;
-
 struct vfs_node;
 
 typedef uint32_t (*read_type_t) (struct vfs_node *, uint32_t, uint32_t, uint8_t *);
 typedef uint32_t (*write_type_t) (struct vfs_node *, uint32_t, uint32_t, uint8_t *);
-typedef void (*open_type_t) (struct vfs_node *, unsigned int flags);
+typedef void (*open_type_t) (struct vfs_node *);
 typedef void (*close_type_t) (struct vfs_node *);
-typedef void (*ioctl_type_t) (struct vfs_node *, unsigned long ,uint8_t *);
+typedef void (*ioctl_type_t) (struct vfs_node *, long int, uint8_t *);
 typedef struct dirent *(*readdir_type_t) (struct vfs_node *, uint32_t);
-typedef struct vfs_node *(*finddir_type_t) (struct vfs_node *, char *name);
-
-
+typedef struct vfs_node *(*finddir_type_t) (struct vfs_node *, const char *name);
 
 typedef struct vfs_fnode
 {
@@ -53,9 +45,7 @@ typedef struct vfs_node
 {
 	uint32_t type;
 	uint32_t flags;
-	uint32_t uid;
-	uint32_t gid;
-	uint32_t inode, inode_dev;
+	size_t size;
 	read_type_t read;
 	write_type_t write;
 	open_type_t open;
@@ -64,6 +54,7 @@ typedef struct vfs_node
 	readdir_type_t readdir;
 	finddir_type_t finddir;
 	struct vfs_node *ptr; // Used by mountpoints and symlinks.
+	void *internal;
 	union
 	{
 		vfs_fnode_t * fnode;
@@ -71,6 +62,30 @@ typedef struct vfs_node
 	};
 } vfs_node_t;
 
-int init_vfs();
-char * vfs_canonicalize_path(char *cwd, char *input);
+
+typedef struct file {
+  unsigned short mode;
+  unsigned int pos;
+  vfs_node_t *node;
+} file_t;
+
+typedef struct dir {
+  unsigned int pos;
+  vfs_node_t *node;
+} dir_t;
+
+typedef struct dirent // One of these is returned by the readdir call, according to POSIX.
+{
+	char d_name[128]; // Filename.
+	uint32_t ino;     // Inode number. Required by POSIX.
+} dirent_t;
+
+// File modes: first bit is read/write, second bit is append, third on is binary mode
+#define FS_MODE_READ 0
+#define FS_MODE_WRITE 2
+#define FS_MODE_APPEND 4
+#define FS_MODE_BINARY 8
+
+int init_vfs(void *initrd);
+int vfs_mount(vfs_node_t * node, char* mountPoint);
 #endif

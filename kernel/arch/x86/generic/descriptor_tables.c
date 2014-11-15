@@ -2,6 +2,9 @@
 #include <sys/logging.h>
 #include <string.h>
 #include <arch/x86/descriptor_tables.h>
+#if defined(__cplusplus)
+extern "C" { /* Use C linkage. */
+#endif
 
 struct gdt_entry gdt_entries[6];
 struct gdt_ptr   gdt_ptr;
@@ -125,3 +128,7 @@ uint32_t x86_init_descriptor_tables() ///Returns how many tables were initialise
 	irq_install();
 	return 0;
 }
+
+#if defined(__cplusplus)
+}
+#endif

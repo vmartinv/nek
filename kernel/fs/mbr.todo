@@ -1,0 +1,133 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/logging.h>
+#include <arch/x86/lba.h>
+#include <fs/mbr.h>
+
+ptable_entry_t* parse_partition_info(const char* sector) {
+	if (!sector[4]) return NULL; // If system id is 0, entry is empty
+	ptable_entry_t *info = (ptable_entry_t*) malloc(sizeof(ptable_entry_t));
+	info->boot = sector[0];
+	info->start_head = sector[1];
+	info->start_sector = sector[2] & ((1<<6)-1);
+	info->start_cylinder = (sector[2] &  ~((1<<6)-1)) | sector[3];
+	info->type = sector[4];
+	info->lba_start = sector[8] + sector[9]*0x100 + sector[10]*0x10000 + sector[11]*0x1000000;
+	info->lba_length = sector[12] + sector[13]*0x100 + sector[14]*0x10000 + sector[15]*0x1000000;
+	return info;
+}
+#define READ_MBR(buf) lba_rw(0, HD_READ, 1, buf)
+
+const ptable_t* mbr_get_partition_table() {
+	unsigned char *sector = (unsigned char*)malloc(512);
+	if(READ_MBR(sector)) return NULL;
+	ptable_t *pt=(ptable_t*)malloc(sizeof(ptable_t));
+	pt->parts=list_create();
+	for(int i=0; i<4; i++) {
+		ptable_entry_t *pe=parse_partition_info((char*)(sector+446+i*16));
+		if (pe) {
+			//~ pe->drive = d;
+			printk("fs", "partition %d total sectors: %d\n", i, (int)pe->lba_start);
+			list_append(pt->parts, list_create_item(pe));
+		}
+	}
+	return pt;
+}
+
+const ptable_entry_t * mbr_get_partition(const ptable_t*table){
+	if(!table) return NULL;
+	list_node_t *node=table->parts->head;
+	while(node){
+		ptable_entry_t *pe=node->value;
+		return pe;
+      //~ switch (pe->type) {
+      //~ case FS_TYPE_EXT2:
+        //~ fs_root = ext2_root_node(ext2_init_fs(pe));
+
+        /* int i=0; */
+        /* struct dirent* entry; */
+        /* char dir[] = "/boot/"; */
+        /* fs_node_t *n = fs_finddir(fs_root, dir); */
+        /* if (n) { */
+        /*   while(entry = fs_readdir(n, i++)) { */
+        /*     printf("%s - %d\n", entry->name, entry->inode); */
+        /*   } */
+        /*   printf("all done.\n"); */
+        /* } else { */
+        /*   printf("dir not found\n"); */
+        /* } */
+
+        /* char path[] = "/boot/grub/grub.cfg"; */
+        /* file_t *f = fopen(path, "w"); */
+        /* if (f) { */
+        /*   char *buff = (char*)malloc(20); */
+        /*   int i; */
+        /*   for(i=0; i < 3; i++) { */
+        /*     fread(buff, 1, 19, f); */
+        /*     buff[19] = '\0'; */
+        /*     puts(buff); */
+        /*   } */
+        /*   fclose(f); */
+        /* } else { */
+        /*   printf("file not found\n"); */
+        /* } */
+        //~ break;
+      //~ default:
+        //~ printk("fs", "unknown file system id:%x\n", (int)pe->type);
+        //~ break;
+      //~ }
+		node=node->next;
+	}
+	
+	return NULL;
+}
+
+void mbr_verify() {
+	unsigned char sect[512];
+	READ_MBR(sect);
+	if ((sect[0x1fe]==0x55) && (sect[0x1ff]==0xaa)) {
+		unsigned char *p = &sect[0x1be];
+		char *s;
+		printf("   | Bootable | Type      | Start Sector | Capacity\n");
+		for (int i=0; i<4; ++i) {
+			printf( " %d ", i);
+			/* system indicator at offset 0x04 */
+			if (p[0x04] == 0x00) {
+				printf("| Empty\n");
+				p += 16;
+				continue;
+			}
+			if (p[0x00] == 0x80)
+				s = "| Yes      ";
+			else
+				s = "| No       ";
+			printf( s);
+			/* system indicator at offset 0x04 */
+			if (p[0x04] == FST_FS) {
+				printf("| Skelix FS ");
+			} else if (p[0x04] == FST_SW) {
+				printf("| Skelix SW ");
+			} else
+				printf("| Unknown   ", *p);
+			printf("| 0x%x   ", *(unsigned long*)&p[0x08]);
+			/* capacity */
+			printf("| %dM\n", (*(unsigned long*)&p[0x0c]*512)>>20);
+			p += 16;
+		}
+	}
+}
+
+/* DANGEROUS
+static void setup_DPT(void) {
+	unsigned char sect[512] = {0};
+	sect[0x1be] = 0x80;
+	sect[0x1be + 0x04] = FST_FS;
+	*(unsigned long *)&sect[0x1be + 0x08] = 1;
+	*(unsigned long *)&sect[0x1be + 0x0c] = 85*1024*2; //85MB
+	sect[0x1ce + 0x04] = FST_SW;
+	*(unsigned long *)&sect[0x1ce + 0x08] = 85*1024*2+1;
+	*(unsigned long *)&sect[0x1ce + 0x0c] = 16*1024*2; // 16MB
+	sect[0x1fe] = 0x55;
+	sect[0x1ff] = 0xaa;
+	hd_rw(0, HD_WRITE, 1, sect);
+}*/

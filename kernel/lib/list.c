@@ -36,7 +36,7 @@ void list_append(list_t * list, list_node_t * node) {
 
 list_node_t * list_create_item(void * item) {
 	/* Insert an item into a list */
-	list_node_t * node = malloc(sizeof(list_node_t));
+	list_node_t * node = (list_node_t *)malloc(sizeof(list_node_t));
 	node->value = item;
 	node->next  = NULL;
 	node->prev  = NULL;
@@ -91,7 +91,7 @@ void list_insert_before(list_t * list, list_node_t * after, list_node_t * node) 
 
 list_t * list_create(void) {
 	/* Create a fresh list */
-	list_t * out = malloc(sizeof(list_t));
+	list_t * out =(list_t * ) malloc(sizeof(list_t));
 	out->head = NULL;
 	out->tail = NULL;
 	out->length = 0;

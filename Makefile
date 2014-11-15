@@ -10,6 +10,7 @@ BOARD_ID := ${ARCH}/${BOARD}
 #Tools
 #--------------------------------------------
 CC:=i686-elf-gcc
+CCPLUS:=i686-elf-g++
 AS:=nasm -felf
 LD:=i686-elf-ld -m elf_i386
 OBJDUMP:=i686-elf-objdump
@@ -20,17 +21,21 @@ BUILD_NUMBER_LDFLAGS += -Xlinker --defsym -Xlinker KERN_BNUM=$$(cat $(BUILD_NUMB
 
 # Freestanding binary, strip extra shits
 #CFLAGS= -std=gnu99  -ffreestanding  -finline-functions -Wno-unused-parameter -Wall -Wextra -I./ -I./kernel/includes -march=i686  -D_IEEE_MODE
-CFLAGS := -ffreestanding -std=gnu99  -nostartfiles -D_IEEE_MODE
-CFLAGS += -Wall -Wextra -Wno-unused-function -Wno-unused-parameter
+CPPFLAGS := -ffreestanding  -fno-exceptions -fno-rtti  -nostartfiles -D_IEEE_MODE -pedantic -Ofast -std=c++11
+CFLAGS := -ffreestanding  -std=gnu99 -nostartfiles -D_IEEE_MODE
+CFLAGS   += -Wall -Wextra -Wno-unused-function -Wno-unused-parameter
+CPPFLAGS += -Wall -Wextra -Wno-unused-function -Wno-unused-parameter
 LDFLAGS= -ffreestanding -nostdlib -lgcc $(BUILD_NUMBER_LDFLAGS)
 ASFLAGS =
 
 debug ?= 0
 ifeq ($(debug), 1)
     CFLAGS += -DDEBUG -g -fvar-tracking -fvar-tracking-assignments  -gdwarf-2
+    CPPFLAGS += -DDEBUG -g -Og -fvar-tracking -fvar-tracking-assignments  -gdwarf-2
     LDFLAGS += -g
 else
 	CFLAGS += -O2
+	CPPFLAGS += -O2
 endif
 
 consoleonly ?= 0
@@ -39,8 +44,9 @@ ifeq ($(consoleonly), 1)
 	ASFLAGS += -DCONSOLE_ONLY
 endif
 
+program ?= kbd_test
 LD_SCRIPT := kernel/arch/${ARCH}/${BOARD}/link.ld
-INCLUDE_DIR := "kernel/includes"
+INCLUDE_DIR := -I"kernel/includes" -I"${program}/includes"
 
 GENISO := xorriso -as mkisofs
 EMU := qemu-system-i386
@@ -49,8 +55,7 @@ EMU := qemu-system-i386
 #--------------------------------------------
 FDLIBM_FILES := $(patsubst %.c,%.o,$(wildcard fdlibm/*.c))
 
-program ?= kbd_test
-MAIN_FILES := $(patsubst %.c,%.o,$(wildcard ${program}/*.c))
+MAIN_FILES := $(patsubst %.c,%.o,$(wildcard ${program}/*/*.c)) $(patsubst %.c,%.o,$(wildcard ${program}/*.c)) $(patsubst %.cpp,%.o,$(wildcard ${program}/*/*.cpp)) $(patsubst %.cpp,%.o,$(wildcard ${program}/*.cpp))
 
 
 GLOBAL_ROOT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/*.c))
@@ -59,7 +64,7 @@ GLOBAL_INIT_FILES := $(patsubst %.c,%.o,$(wildcard kernel/init/*.c))
 GLOBAL_DRIVERS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/drivers/*.c))
 GLOBAL_LOW_FILES := $(patsubst %.c,%.o,$(wildcard kernel/low/*.c))
 GLOBAL_FS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/fs/*.c))
-GLOBAL_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/lib/*.c))
+GLOBAL_LIB_FILES := $(patsubst %.c,%.o,$(wildcard kernel/lib/*.c)) $(patsubst %.cpp,%.o,$(wildcard kernel/lib/*.cpp))
 GLOBAL_GRAPHICS_FILES := $(patsubst %.c,%.o,$(wildcard kernel/graphics/*.c))
 
 ARCH_ROOT_FILES := $(patsubst %.s,%.o,$(wildcard kernel/arch/${ARCH}/*.s)) $(patsubst %.c,%.o,$(wildcard kernel/arch/${ARCH}/*.c))
@@ -111,12 +116,16 @@ endif
 
 iso: kernel
 	@echo "ISO [A]| bin/cd.iso"
-	@cp bin/kernel.elf iso/boot/nesos2.img
+	@cp bin/kernel.elf iso/boot/nek.img
 	@grub-mkrescue iso -o bin/cd.iso
-	
+
+mount:
+	@echo "DIR    | mount"
+	@mkdir -p mount
+
 installtodisk: kernel
 	@(mount | grep mount > /dev/null) || (sudo losetup -f -o 32256 --sizelimit 33521664 disk.img && sudo mount /dev/loop0 mount)
-	@cp bin/kernel.elf mount/nesos2.img
+	@cp bin/kernel.elf mount/nek.img
 	@sync
 
 run: installtodisk
@@ -132,7 +141,11 @@ gdb:
 
 %.o: %.c .compiler_flags
 	@echo " CC    |" $@
-	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} ${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
+
+%.o: %.cpp .compiler_flags
+	@echo " CCPLUS|" $@
+	@${CCPLUS} -c ${CPPFLAGS} ${COMPILE_OPTIONS} ${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -o $@ $<
 
 %.o: %.s .compiler_flags
 	@echo " AS    |" $@
@@ -140,11 +153,11 @@ gdb:
 
 fdlibm/%.o: fdlibm/%.c
 	@echo " CC    |" $@
-	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-maybe-uninitialized -I${INCLUDE_DIR} -o $@ $<
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-maybe-uninitialized ${INCLUDE_DIR} -o $@ $<
 
 kernel/lib/liballoc.o: kernel/lib/liballoc.c .compiler_flags
 	@echo " CC    |" $@
-	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} -I${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -w -o $@ $<
+	@${CC} -c ${CFLAGS} ${COMPILE_OPTIONS} ${INCLUDE_DIR} -DBOARD${ARCH}${BOARD} -DARCH${ARCH} -w -o $@ $<
 	
 
 .PHONY: clean force
@@ -153,7 +166,7 @@ kernel/lib/liballoc.o: kernel/lib/liballoc.c .compiler_flags
 	@echo '$(CFLAGS) $(ASFLAGS)' | cmp -s - $@ || echo '$(CFLAGS) $(ASFLAGS)' > $@
 
 install: kernel
-	@cp bin/kernel.elf /boot/nesos2.img
+	@cp bin/kernel.elf /boot/nek.img
 	@grub-mkconfig -o /boot/grub/grub.cfg
 
 clean:
@@ -166,4 +179,4 @@ clean:
 	@rmdir bin
 	@echo "CLN    | compiler_flags" 
 	@rm -f compiler_flags
-	@rm -f iso/boot/nesos2.img
+	@rm -f iso/boot/nek.img

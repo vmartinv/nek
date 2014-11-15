@@ -3,7 +3,6 @@ http://es.wikipedia.org/wiki/Fractal
 http://wiki.osdev.org/Text_UI#Colours
 */
 #include <stdio.h>
-#include <graphics/palette.h>
 #include <graphics/video.h>
 #include <math.h>
 #include <stdlib.h>

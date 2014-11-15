@@ -10,13 +10,19 @@
 #include <string.h>
 extern uint32_t _kernel_start, _kernel_end;
 
+#if defined(__cplusplus)
+extern "C"  /* Use C linkage. */
+#endif
 int x86_init_descriptor_tables();
 void pit_install(uint32_t frequency);
 
-void kmain();
+void kmain(const multiboot_info_t * multiboot);
 
 /// The entry point for the x86 version of the NesOS Microkernel
-void kernel_entry(int magic, multiboot_info_t * multiboot) {
+#if defined(__cplusplus)
+extern "C" /* Use C linkage for kernel_main. */
+#endif
+void kernel_entry(int magic, const multiboot_info_t * multiboot) {
     video_load_info((svga_mode_info_t *)multiboot->vbe_mode_info);
     console_init();
     //~ printk("ok", (svga_mode_info_t *)multiboot->vbe_mode_info->screenheight);
@@ -41,7 +47,16 @@ void kernel_entry(int magic, multiboot_info_t * multiboot) {
     asm("sti");
     printk("device", "Starting (basic) PIT...\n");
     pit_install(1000);
-    init_kmalloc((uintptr_t)&_kernel_end);
+    
+	// Find the location of our initial ramdisk.
+	assert(multiboot->mods_count > 0);
+	u32 initrd_end = *(u32*)(multiboot->mods_addr+4);
+	
+	u32 placement=(u32)&_kernel_end;
+	if(placement<initrd_end) placement=initrd_end;
+	// Don't trample our module with placement accesses, please!
+    init_kmalloc((uintptr_t)placement);
+    
     printk("ok", "Starting PMM...\n");
     init_pmm((uintptr_t)&_kernel_start, multiboot->mem_upper*1024);
     video_init();//now we can set up buffers and other stuff
@@ -52,6 +67,6 @@ void kernel_entry(int magic, multiboot_info_t * multiboot) {
     //~ }
     printk("debug", "Exiting Boot\n");
     console_printdiv();
-    kmain();
+    kmain(multiboot);
     return;
 }

@@ -18,11 +18,28 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef __generator_h__
-#define __generator_h__
+#ifndef __palette_h__
+#define __palette_h__
 
-#include <graphics/palette.h>
+#include <types.h>
 
-palette_t *palette_generate_NTSC(palette_t *palette, int hue,int sat);
+typedef struct palentry_s {
+	u8 r,g,b;
+} palentry_t;
+
+typedef struct palette_s {
+	palentry_t pal[8][64];
+} palette_t;
+
+palette_t *palette_create();
+void palette_destroy(palette_t *p);
+int palette_init();
+u8 *palette_get();
+void palette_update(u8 addr,u8 data);
+void palette_set(palette_t *p);
+
+
+#define GETINDEX_COLOR(paleta, idx) ((paleta)+(idx)*0x20)
+u32 palette_get_value(const u8 idx);
 
 #endif

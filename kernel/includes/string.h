@@ -2,6 +2,9 @@
 #define LIB_STRING_H
 
 #include <types.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 char* strtok(char *s, const char *delim);
 char* strchr(const char *s, int c);
 char* strsep(char **stringp, const char *delim);
@@ -23,4 +26,7 @@ size_t lfind(const char * str, const char accept);
 size_t strspn(const char * str, const char * accept);
 char * strtok_r(char * str, const char * delim, char ** saveptr);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

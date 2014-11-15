@@ -13,5 +13,9 @@ uint32_t pmm_get_memory_bytes();
 //for profiler
 int pmm_bitmap_test(uintptr_t address);
 
+int liballoc_lock();
+int liballoc_unlock();
+void* liballoc_alloc(int pages);
+int liballoc_free(void*ptr,int pages);
 
 #endif

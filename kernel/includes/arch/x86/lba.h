@@ -20,8 +20,7 @@
 #define FST_FS	0x2e			/* normal partition */
 #define FST_SW	0x2f			/* swap partition */
 
-void hd_rw(unsigned int, unsigned int, unsigned int, void *);
-void verify_DPT(void);
-
+int lba_rw(unsigned int lba, unsigned int com, unsigned int sects_to_access, void *buf);
+int lba_init();
 
 #endif

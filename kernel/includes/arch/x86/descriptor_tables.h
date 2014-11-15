@@ -3,6 +3,9 @@
 #include <types.h>
 #include <arch/x86/regs.h>
 
+#if defined(__cplusplus)
+extern "C" { /* Use C linkage for kernel_main. */
+#endif
 ///A gdt entry
 struct gdt_entry
 {
@@ -18,7 +21,7 @@ struct gdt_ptr
     unsigned short limit;
     unsigned int base;
 } __attribute__((packed));
-extern void gdt_flush();
+extern void gdt_flush(uint32_t ptr);
 void gdt_set_gate(signed int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
 
 struct idt_entry
@@ -145,5 +148,9 @@ struct tss_entry_struct
 } __attribute__((packed));
 
 typedef struct tss_entry_struct tss_entry_t;
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif

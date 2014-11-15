@@ -18,8 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <graphics/palette.h>
-#include "generator.h"
+#include <ntsc/palette.h>
+#include <ntsc/generator.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -121,7 +121,7 @@ void palette_update(u8 addr,u8 data)
 	palettecache32[addr+0xE0] = palette32[7][data];
 }
 
-inline u32 palette_get_value(const u8 idx){
+u32 palette_get_value(const u8 idx){
 	return palettecache32[idx];
 }
 

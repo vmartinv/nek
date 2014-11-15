@@ -1,4 +1,5 @@
 #include <lib/liballoc.h>
+#include <sys/memory.h>
 #include <string.h>
 /**  Durand's Amazing Super Duper Memory functions.  */
 

@@ -21,12 +21,16 @@ inline static void scroll() {
     }
 }
 
+void console_move_write_cursor(int x, int y){
+	term_x=x, term_y=y;
+}
+
 ///  Better than textmode_write, it formats the output at a basic level.
 void putchar(unsigned char c) {
     if (c == 0x08 && term_x) {
         term_x--;
     } else if (c == 0x09) {
-        term_x = (term_x+8) & ~(8-1);
+        term_x = (term_x+8) & ~7;
     } else if (c == '\r') {
        term_x = 0;
     } else if (c == '\n') {
@@ -47,6 +51,13 @@ void putchar(unsigned char c) {
     scroll();
     // Move the hardware cursor.
     textmode_setcursor(term_x, term_y);
+    //~ video_show_console();
+}
+
+void putchar_now(unsigned char c) {
+	int x=term_x, y=term_y;
+	putchar(c);
+	video_flush_char(x, y);
 }
 
 ///  Prints a basic string
@@ -73,7 +84,6 @@ void console_init() {
 		textmode_init((uint16_t*)0xB8000, lines, cols);
 #else
 		lines=video_get_lines(), cols=video_get_cols();
-		//~ lines=25, cols=80;
 		textmode_init(video_get_text_buffer(), lines, cols);
 #endif
 

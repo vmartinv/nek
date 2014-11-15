@@ -31,9 +31,13 @@ struct HD_PARAM {
 	unsigned int sect;
 } HD0 = {208, 16, 63};
 
+int lba_init(){
+	return 0;
+}
+
 /* lba:	starts from 0 
  start_sect: starts from 1 */
-void hd_rw(unsigned int lba, unsigned int com, unsigned int sects_to_access, void *buf) {
+int lba_rw(unsigned int lba, unsigned int com, unsigned int sects_to_access, void *buf) {
 	/* lba to chs */
 	/* cylinder = LBA / (heads_per_cylinder * sectors_per_track)
 	   temp = LBA % (heads_per_cylinder * sectors_per_track)
@@ -63,64 +67,5 @@ void hd_rw(unsigned int lba, unsigned int com, unsigned int sects_to_access, voi
 		insl(HD_PORT_DATA, sects_to_access<<7, buf);
 	else if (com == HD_WRITE)
 		outsl(HD_PORT_DATA, sects_to_access<<7, buf);
-}
-/* DANGEROUS
-static void setup_DPT(void) {
-	unsigned char sect[512] = {0};
-	sect[0x1be] = 0x80;
-	sect[0x1be + 0x04] = FST_FS;
-	*(unsigned long *)&sect[0x1be + 0x08] = 1;
-	*(unsigned long *)&sect[0x1be + 0x0c] = 85*1024*2; //85MB
-	sect[0x1ce + 0x04] = FST_SW;
-	*(unsigned long *)&sect[0x1ce + 0x08] = 85*1024*2+1;
-	*(unsigned long *)&sect[0x1ce + 0x0c] = 16*1024*2; // 16MB
-	sect[0x1fe] = 0x55;
-	sect[0x1ff] = 0xaa;
-	hd_rw(0, HD_WRITE, 1, sect);
-}*/
-
-void verify_DPT(void) {
-	unsigned char sect[512];
-	unsigned i = 0;
-	unsigned int *q = (unsigned int *)(HD0_ADDR);
-
-	hd_rw(0, HD_READ, 1, sect);
-	if ((sect[0x1fe]==0x55) && (sect[0x1ff]==0xaa)) {
-		unsigned char *p = &sect[0x1be];
-		char *s;
-		printk("lba", "   | Bootable | Type      | Start Sector | Capacity \n");
-		for (i=0; i<4; ++i) {
-			printk("lba", " %d ", i);
-			/* system indicator at offset 0x04 */
-			if (p[0x04] == 0x00) {
-				printk("lba", "| Empty\n");
-				p += 16;
-				q += 2;
-				continue;
-			}
-			if (p[0x00] == 0x80)
-				s = "| Yes      ";
-			else
-				s = "| No       ";
-			printk("lba", s);
-			/* system indicator at offset 0x04 */
-			if (p[0x04] == FST_FS) {
-				printk("lba", "| Skelix FS ");
-			} else if (p[0x04] == FST_SW) {
-				printk("lba", "| Skelix SW ");
-			} else
-				printk("lba", "| Unknown   ", *p);
-			/* starting sector number */
-			*q++ = *(unsigned long *)&p[0x08];
-			printk("lba", "| 0x%x   ", *(unsigned long*)&p[0x08]);
-			/* capacity */
-			*q++ = *(unsigned long*)&p[0x0c];
-			printk("lba", "| %dM\n", (*(unsigned long*)&p[0x0c]*512)>>20);
-			p += 16;
-		}
-	} else {
-		printk("lba", "No bootable DPT found on HD0\n");
-		printk("lba", "Creating DPT on HD0 automaticly\n");
-		printk("lba", "Creating file system whatever you want it or not!!\n");
-	}
+	return 0;
 }

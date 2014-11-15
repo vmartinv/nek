@@ -1,5 +1,6 @@
 #include <types.h>
 #include <string.h>
+#include <stdlib.h>
 #include <arch/x86/descriptor_tables.h>
 #include <arch/x86/ports.h>
 
@@ -13,6 +14,7 @@
 #define NUMLOCK 0x80
 
 #define RELEASED_MASK 0x80
+//http://www.win.tue.nl/~aeb/linux/kbd/scancodes-10.html#ss10.6 (see set1)
 // keyboard layouts:
 uint8_t kbdus[128] =
 {
@@ -54,9 +56,12 @@ uint8_t kbdus[128] =
     0,	/* All other keys are undefined */ 
 };
 
+#define MAX_BUFFER 256
 static uint8_t keydown[256];
-static uint8_t buffer[256];
-static size_t szbuf = 0;
+static uint8_t buffer[MAX_BUFFER];
+static int tail = 0, head=0;
+
+static int last=0;
 
 #define is_enter_bkspc(c) ((c) == '\n' || (c) == 8)
 #define is_space(c)       ((c) == ' ')
@@ -65,39 +70,52 @@ static size_t szbuf = 0;
 void kbd_handler(registers_t *regs) {
 	uint8_t scancode = inb(0x60);
 	if (scancode & RELEASED_MASK) {
+		scancode&=~RELEASED_MASK;
 		keydown[scancode] = 0;
+		last=scancode;
 	} else {
 		keydown[scancode] = 1;
 		uint8_t c = kbdus[scancode];
 		if (isdigit(c) || isalpha(c) || is_enter_bkspc(c) || is_space(c)){
-			buffer[szbuf++] = c;
+			buffer[head] = c;
+			head=(head+1)%MAX_BUFFER;
+			if(tail==head) tail=(tail+1)%MAX_BUFFER;
 		}
 	}
 }
 
+int wait_scancode(){
+	last=-1;
+	int q=0;
+	while(last==-1){q+=rand();}
+	return last;
+	
+}
+
+
+void kbd_clear_buffer(){
+	tail=head=0;
+}
 void kbd_init(){
-	szbuf=0;
-	memset(buffer, '\0', sizeof(buffer));
+	kbd_clear_buffer();
 	register_interrupt_handler(IRQ1, &kbd_handler);
 }
 
+
 uint8_t getchar()
 {
-	if (szbuf){
-		char c = buffer[szbuf-1];
-		szbuf--;
-		return c;
-	}
-	else
-		return '\0';
+	while(tail==head);
+	char c = buffer[tail];
+	tail=(tail+1)%MAX_BUFFER;
+	return c;
 }
 
-bool iskeydown(int scancode)
+bool kbd_iskeydown(int scancode)
 {
-	return keydown[scancode];
+	return !!keydown[scancode];
 }
 
-bool iskeyup(int scancode)
+bool kbd_iskeyup(int scancode)
 {
 	return !keydown[scancode];
 }

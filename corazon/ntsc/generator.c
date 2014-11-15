@@ -21,7 +21,7 @@
 //palette generator borrowed from nintendulator
 
 #include <math.h>
-#include <graphics/palette.h>
+#include <ntsc/palette.h>
 
 #ifndef M_PI
 #define M_PI 3.14159f

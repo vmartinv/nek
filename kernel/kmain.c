@@ -1,18 +1,26 @@
 #include <sys/logging.h>
+#include <sys/multiboot.h>
 #include <stdio.h>
-//~ #include <sys/vfs.h>
 #include <sys/timer.h>
 #include <sys/syscall.h>
 #include <sys/task.h>
-//~ #include <fs/disk.h>
-//~ #include <fs/mbr.h>
-//~ #include <fs/vfs.h>
+#include <fs/vfs.h>
 #include <arch/x86/lba.h>
+#include <fs/mbr.h>
+#include <fs/fat.h>
 void kbd_init();
 
-int start_service(char *daemon,int essential,int (*func)())
+//~ int init_vfs(const multiboot_info_t * multiboot){
+	//~ if(lba_init()) return 1;
+	//~ const ptable_entry_t * pe=mbr_get_partition(mbr_get_partition_table());
+	//~ if(!pe) return 2;
+	//~ if(fat_init()) return 3;
+	//~ return 0;
+//~ }
+
+int start_service(const char *daemon,int essential, int res)
 {
-	if(func()){
+	if(res){
 		printk("daemon","Starting kernel daemon %s... failed\n",daemon);
 		if(essential) panic("Couldn't start required daemon!");
 		return 1;
@@ -23,17 +31,16 @@ int start_service(char *daemon,int essential,int (*func)())
 
 int main();
 
-void kmain()
+void kmain(const multiboot_info_t * multiboot)
 {
 	printk("ok","Entering Kernel Environment...\n");
 	kbd_init();
 	//Start services
-	//~ start_service("syscalld",1,init_syscalls);
-	//~ start_service("taskd",1,task_init);
-	//~ start_service("kvfsd",0,init_vfs);
-	//start_service("filesystemd",1,init_fs);
-	start_service("timerd",1,init_timer);
-	verify_DPT();
+	start_service("vfsd",1,init_vfs((void*)*((u32*)multiboot->mods_addr)));
+	//~ start_service("filesystemd",1,init_fs(multiboot));
+	start_service("timerd",1,init_timer());
+	
+	
 		// Disk test
 	/*disk_t *hda0 = disk_allocate();
 	hda0->bus = 0;
