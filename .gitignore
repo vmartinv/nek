@@ -1,4 +1,5 @@
 .compiler_flags
+disk.img
 *.o
 bin/*
 doc

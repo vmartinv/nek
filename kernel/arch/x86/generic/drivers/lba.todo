@@ -1,0 +1,238 @@
+#include <stdio.h>
+#include <types.h>
+#include <sys/timer.h>
+#include <stdlib.h>
+#include <arch/x86/lba.h>
+#include <arch/x86/descriptor_tables.h>
+#include <arch/x86/ports.h>
+
+#define IO_DELAY()        inb(0x80), inb(0x80), inb(0x80), inb(0x80)
+
+lba_drive_t *drives[4];
+
+static void primary_disk_handler(registers_t *r) {
+  printf("primary disk handler: %b\n", inb(LBA_COMMAND_P_PORT));
+  outb(PIC1_COMMAND, PIC_EOI);
+  outb(PIC2_COMMAND, PIC_EOI);
+}
+
+static void secondary_disk_handler(registers_t *r) {
+  printf("secondary disk handler called\n");
+}
+
+static inline void wait_for_data(int offset) {
+  while(!(inb(LBA_COMMAND_PORT + offset) & LBA_STATUS_DRIVE_READY));
+  //check LBAhi and LBAmid
+  while(!(inb(LBA_COMMAND_PORT + offset) & LBA_STATUS_DATA_READY));
+
+}
+
+static void send_rw_command(int command, uint16_t count, lba_drive_t* drive, uint64_t address){
+
+  unsigned short offset = drive->bus == PRIMARY ? 0 : LBA_S_OFFSET,
+    slavebit = drive->type == MASTER ? 0 : 1,
+    thing = drive->type == MASTER ? 0x40 : 0x50; //How's this called?
+
+  //  outb(LBA_3_BLOCK_ADDR_P_PORT, LBA_SELECT_MASTER_COMMAND);
+  outb(LBA_FEATURES_PORT + offset, 0x00);
+  outb(LBA_3_BLOCK_ADDR_PORT + offset, thing | (slavebit << 4));
+  IO_DELAY();
+
+  outb(LBA_SECTOR_COUNT_PORT + offset, count >> 8);
+  outb(LBA_0_BLOCK_ADDR_PORT + offset, (address >> 24) & 0xff);
+  outb(LBA_1_BLOCK_ADDR_PORT + offset, (address >> 32) & 0xff);
+  outb(LBA_2_BLOCK_ADDR_PORT + offset, (address >> 40) & 0xff);
+  outb(LBA_SECTOR_COUNT_PORT + offset, count & 0xff);
+  outb(LBA_0_BLOCK_ADDR_PORT + offset, address & 0xff);
+  outb(LBA_1_BLOCK_ADDR_PORT + offset, (address >> 8) & 0xff);
+  outb(LBA_2_BLOCK_ADDR_PORT + offset, (address >> 16) & 0xff);
+
+  outb(LBA_COMMAND_PORT + offset, command);
+}
+
+bool poll(){
+	/*
+.lp1:
+	in al, dx		; grab a status byte
+	test al, 0x80		; BSY flag set?
+	jne short .retry
+	test al, 8		; DRQ set?
+	jne short .data_rdy
+.retry:
+	dec ecx
+	jg short .lp1
+; need to wait some more -- loop until BSY clears or ERR sets (error exit if ERR sets)
+ 
+.pior_l:
+	in al, dx		; grab a status byte
+	test al, 0x80		; BSY flag set?
+	jne short .pior_l	; (all other flags are meaningless if BSY is set)
+	test al, 0x21		; ERR or DF set?
+	jne short .fail*/
+	uint16_t dx=0;
+	for(int i=0; i<4; i++){
+		asm ("movw %%dx,%0" : "=a" (dx) : );
+		if(!(dx&0x80) && (dx&8)) return true;
+	}
+	uint16_t errmask=(1<<5) | (1<<0);
+	do{
+		asm ("movw %%dx,%0" : "=a" (dx) : );
+		if(dx&0x80 && dx&errmask) return false;
+	}while(!(dx&0x80));
+	return true;
+}
+
+int lba_read_sectors(lba_drive_t* drive, unsigned long address, unsigned short count, unsigned char *buff) {
+  send_rw_command(LBA_READ_COMMAND_EXT, count, drive, address);
+  unsigned short offset = drive->bus == PRIMARY ? 0 : LBA_S_OFFSET;
+  int i;
+ // poll();
+  unsigned char response;
+  do{
+    response = inb(LBA_COMMAND_PORT + offset);
+  }while((response & LBA_STATUS_DRIVE_BUSY) && !(response & 1) );
+  for (i = 0; i < count; i++) {
+    while(!(inb(LBA_COMMAND_PORT + offset) & LBA_STATUS_DRIVE_READY));
+    //wait_for_data(offset);
+	//poll();
+    
+    do {
+      response = inb(LBA_COMMAND_PORT + offset);
+      if ((response & LBA_STATUS_ERROR) || (response & LBA_STATUS_DRIVE_FAULT)) {
+        printf("disk error reading 0x%x: %d\n", address, (int)response);
+        return 0;
+      }
+    } while(!(response & LBA_STATUS_DATA_READY));
+
+    insw(LBA_DATA_PORT+offset, (char*)(buff+i*512), 256);
+  }
+  return 1;
+}
+
+void lba_write_sectors(lba_drive_t* drive, unsigned long address, unsigned short count, unsigned char *buff) {
+  send_rw_command(LBA_WRITE_COMMAND_EXT, count, drive, address);
+  unsigned short offset = drive->bus == PRIMARY ? 0 : LBA_S_OFFSET;
+  int i;
+  unsigned char response;
+  for (i = 0; i < count; i++) {
+    do {
+      response = inb(LBA_COMMAND_PORT + offset);
+      if ((response & LBA_STATUS_ERROR) || (response & LBA_STATUS_DRIVE_FAULT)) {
+        return;
+      }
+
+    } while(!(response & LBA_STATUS_DRIVE_READY));
+
+
+    int idx;
+    unsigned short temp;
+    for (idx = 0; idx < 256; idx++) {
+      temp = ((unsigned short)buff[i*256 + idx*2] << 8) + buff[i*256 + idx*2 + 1];
+      outw(LBA_DATA_PORT + offset, temp);
+      printf("");
+    }
+    outb(LBA_COMMAND_PORT + offset, LBA_CACHE_FLUSH_COMMAND);
+    //    sleep(0.1);
+    while(!(inb(LBA_COMMAND_PORT + offset) & LBA_STATUS_DATA_READY));
+
+  }
+}
+
+static void show_drive_info(lba_drive_t* d) {
+  printf("%s %s using %s, %d available sectors (%d mbytes)\n",
+         d->bus == PRIMARY ? "Primary" : "Secondary",
+         d->type == MASTER ? "master" : "slave",
+         d->supports_lba48 ? "LBA48" : "LBA28",
+         (int)d->addressable_sectors,
+          (int)((d->addressable_sectors / 1024 / 1024) *512 ) ); //TODO: improve printf accepts long longs
+}
+
+static bool identify(unsigned short drive_t) {
+  unsigned short offset=0;
+  switch (drive_t) {
+  case LBA_PRIMARY_MASTER:
+    outb(LBA_3_BLOCK_ADDR_P_PORT, LBA_SELECT_MASTER_COMMAND);
+    offset = 0;
+    break;
+  case LBA_PRIMARY_SLAVE:
+    outb(LBA_3_BLOCK_ADDR_P_PORT, LBA_SELECT_SLAVE_COMMAND);
+    offset = 0;
+    break;
+  case LBA_SECONDARY_MASTER:
+    outb(LBA_3_BLOCK_ADDR_S_PORT, LBA_SELECT_MASTER_COMMAND);
+    offset = LBA_S_OFFSET;
+    break;
+  case LBA_SECONDARY_SLAVE:
+    outb(LBA_3_BLOCK_ADDR_S_PORT, LBA_SELECT_SLAVE_COMMAND);
+    offset = LBA_S_OFFSET;
+    break;
+  }
+  //~ settextcolor(GREEN, BLACK);
+  printf("IDENTIFY\n");
+>>>>>>> master
+
+/* Skelix by Xiaoming Mo (skelixos@gmail.com)
+ * Licence: GPLv2 */
+#include <arch/x86/lba.h>
+
+/* IDT_ADDR and GDT_ADDR must align to 16 */
+#define IDT_ADDR	0x80000
+#define IDT_SIZE	(256*8)
+#define GDT_ADDR	((IDT_ADDR)+IDT_SIZE)
+#define GDT_ENTRIES	5
+#define GDT_SIZE	(8*GDT_ENTRIES)
+/* 
+   NULL				0	0
+   CODE_SEL			8	1
+   DATA_SEL			10	2
+   CURR_TASK_TSS	18	3
+   CURR_TASK_LDT	20	4
+ */
+#define HD0_ADDR	(GDT_ADDR+GDT_SIZE)
+#define HD0_SIZE	(4*8)
+
+
+struct HD_PARAM {
+	unsigned int cyl;
+	unsigned int head;
+	unsigned int sect;
+} HD0 = {208, 16, 63};
+
+int lba_init(){
+	return 0;
+}
+
+/* lba:	starts from 0 
+ start_sect: starts from 1 */
+int lba_rw(unsigned int lba, unsigned int com, unsigned int sects_to_access, void *buf) {
+	/* lba to chs */
+	/* cylinder = LBA / (heads_per_cylinder * sectors_per_track)
+	   temp = LBA % (heads_per_cylinder * sectors_per_track)
+	   head = temp / sectors_per_track
+	   sector = temp % sectors_per_track + 1 */
+	unsigned int cyl = lba/(HD0.head * HD0.sect);
+	unsigned int head = (lba%(HD0.head*HD0.sect))/HD0.sect;
+	unsigned int sect = (lba%(HD0.head*HD0.sect))%HD0.sect+1;
+
+#ifdef HD_DEBUG
+	if (com == HD_WRITE)
+		printk("lba", "[w");
+	else
+		printk("lba", "[r");
+	printk("lba", "%d]", lba);
+#endif
+	while ((inb(HD_PORT_STATUS)&0xc0)!=0x40);
+	outb(HD_PORT_SECT_COUNT, sects_to_access);
+	outb(HD_PORT_SECT_NUM, sect);
+	outb(HD_PORT_CYL_LOW, cyl&0xFF);
+	outb(HD_PORT_CYL_HIGH, cyl>>8);
+	outb(HD_PORT_DRV_HEAD, 0xa0|head);
+	outb(HD_PORT_COMMAND, com);
+	while (! (inb(HD_PORT_STATUS)&0x8))
+		;
+	if (com == HD_READ)
+		insl(HD_PORT_DATA, sects_to_access<<7, buf);
+	else if (com == HD_WRITE)
+		outsl(HD_PORT_DATA, sects_to_access<<7, buf);
+	return 0;
+}
