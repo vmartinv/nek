@@ -104,8 +104,9 @@ void kbd_init(){
 
 uint8_t getchar()
 {
-	while(tail==head);
-	char c = buffer[tail];
+	
+	if(tail==head){return 0;}
+	uint8_t c = buffer[tail];
 	tail=(tail+1)%MAX_BUFFER;
 	return c;
 }

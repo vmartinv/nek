@@ -19,9 +19,11 @@ namespace CPU /* CPU: Ricoh RP2A03 (based on MOS6502, almost the same as in Comm
     static void tick()
     {
         // PPU clock: 3 times the CPU rate
-        for(unsigned n=0; n<3; ++n) PPU::tick();
+        PPU::tick();
+        PPU::tick();
+        PPU::tick();
         // APU clock: 1 times the CPU rate
-        for(unsigned n=0; n<1; ++n) APU::tick();
+        APU::tick();
     }
     
     template<bool write> static u8 MemAccess(u16 addr, u8 v)
@@ -50,8 +52,8 @@ namespace CPU /* CPU: Ricoh RP2A03 (based on MOS6502, almost the same as in Comm
     }
 
     // CPU registers:
-    static u16 PC=0xC000;
-    static u8 A=0,X=0,Y=0,S=0;
+    static u16 PC;
+    static u8 A,X,Y,S;
     static union{ /* Status flags: */
         u8 raw;
         RegBit<0> C; // carry
@@ -66,6 +68,9 @@ namespace CPU /* CPU: Ricoh RP2A03 (based on MOS6502, almost the same as in Comm
     void Init(){
 		reset=true, nmi=false, nmi_edge_detected=false, intr=false;
 		running=true;
+		PC=0xC000;
+		A=X=Y=S=0;
+		P.raw=0;
 		// Pre-initialize RAM the same way as FCEUX does, to improve TAS sync.
 		for(unsigned a=0; a<0x800; ++a)
 			RAM[a] = (a&4) ? 0xFF : 0x00;

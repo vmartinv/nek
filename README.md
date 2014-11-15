@@ -17,8 +17,9 @@ Examples
 Besides "emulador" there are two other working programs.
 mandelbrot (shows a exprorable fractal)
 paleta (shows nes avalaible colors)
+corazon (a heart animation using math functions)
 All of them can be compiled with the kernel using make.
-Ej: make program=mandelbrot
+Ej: make program=examples/mandelbrot
 
 Installing
 ================
@@ -61,8 +62,8 @@ Folder Structure
 - kernel/arch code that depends on the architecture
 - kernel/fs file system(currently only vfs implemented)
 - fdlibm: a math library downloaded from internet
-- specs: Some useful documents
+- util/specs: Some useful documents
 - informe: Informe borrador
 - iso: a few files to generate an .iso with the kernel
-- util: contains the program to generate the initrd 
+- util: contains the program to generate the initrd and a few other things
 - util/fuente: Tools/file used to generate the console font

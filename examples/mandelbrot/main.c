@@ -14,7 +14,7 @@ int main()
 {
 	double width=video_getwidth(), height=video_getheight();
 	double xstart=-1,ystart=-1;
-	int iter=10;
+	int iter=100;
 	double zoom=2;
 
 
@@ -116,7 +116,7 @@ int main()
 				printf("cualquier tecla");
 				textmode_setforecolor(0x7);
 				printf(" para continuar...\n");
-				video_show_console();
+				video_flush_console();
 				while(!(c=getchar()));
 				break;
 			default:

@@ -19,7 +19,7 @@ void corazon(int color, double r, double sep){
 		p->x=(16*sin(t)*sin(t)*sin(t))*r, p->y=(13*cos(t)-5*cos(2*t)-2*cos(3*t)-cos(4*t))*r ;
 		p->y=-p->y;
 		p->x+=NES_WIDTH/2, p->y+=NES_HEIGHT/2;
-		video_updatepixel(p->y*NES_WIDTH+p->x, palette_get_value(color));
+		video_updatepixel(p->x, p->y, palette_get_value(color));
 	}
 }
 
@@ -40,13 +40,13 @@ int main()
 			r=i*0.1;
 			double sep=CLIP((rand()/(double)RAND_MAX)/10, 0.001, 1);
 			corazon(GETINDEX_COLOR(p, rand()%8), r, fixedsep?sep2:sep);
-			video_show_frame();
+			video_flush_frame();
 		}
 		while(sz){
 			pto *p=&st[--sz];
-			video_updatepixel(p->y*NES_WIDTH+p->x, palette_get_value(GETINDEX_COLOR(13,0)));
+			video_updatepixel(p->x, p->y, palette_get_value(GETINDEX_COLOR(13,0)));
 			if(!(sz%(1000)) && sz>200)
-					video_show_frame();
+					video_flush_frame();
 		}
 	}
 	return 0;

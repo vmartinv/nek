@@ -87,7 +87,7 @@ void video_clear(){
 //this handles pixels coming directly from the nes engine
 void video_updatepixel(int x,int y,u32 color){
 	if(!initialized) return;
-	u8 *write_ptr=nesscreenbase+y*NES_WIDTH*2*screendepth;
+	u8 *write_ptr=nesscreenbase+y*2*NES_WIDTH*screendepth;
 	setpixel(write_ptr+2*x*screendepth, color);
 	setpixel(write_ptr+(2*x+1)*screendepth, color);
 }
@@ -123,24 +123,23 @@ static int offsetx, offsety;
 void video_flush_scanline(int y){
 	if(!initialized) return;
 	u8 *write_ptr=go_offset(screenbase, offsetx, offsety+y*2);
-	u8 *read_ptr=nesscreenbase+y*NES_WIDTH*2*screendepth;
-	memcpy(write_ptr, read_ptr, NES_WIDTH*2*screendepth);
+	u8 *read_ptr=nesscreenbase+y*2*NES_WIDTH*screendepth;
+	memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
 	write_ptr+=screenbytesPerLine;
-	memcpy(write_ptr, read_ptr, NES_WIDTH*2*screendepth);
+	memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
 }
 
 void video_flush_frame(){
-	//~ if(!initialized) return;
-	//~ u8 *write_ptr=go_offset(screenbase, offsetx, offsety);
-	//~ u8 *read_ptr=nesscreenbase;
-	//~ for(int y=0;y<NES_HEIGHT*2;y++) {
-		//~ for(int x=0;x<NES_WIDTH;x++){
-			//~ setpixel(write_ptr+2*x*screendepth, *read_ptr);
-			//~ setpixel(write_ptr+(2*x+1)*screendepth, *read_ptr++);
-		//~ }
-		//~ if(!(y%2)) read_ptr-=NES_WIDTH;
-		//~ write_ptr+=screenbytesPerLine;
-	//~ }
+	if(!initialized) return;
+	u8 *write_ptr=go_offset(screenbase, offsetx, offsety);
+	u8 *read_ptr=nesscreenbase;
+	for(int y=0;y<NES_HEIGHT;y++) {
+		memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
+		write_ptr+=screenbytesPerLine;
+		memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
+		write_ptr+=screenbytesPerLine;
+		read_ptr+=2*NES_WIDTH*screendepth;
+	}
 }
 
 void video_flush_char(int x, int y){

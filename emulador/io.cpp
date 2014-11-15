@@ -12,12 +12,7 @@ u8 Controls::read(){
 }
 
 namespace IO {
-	//~ Controls asd
 	Controls player_buttons[2]={{36,37,38,28,0x48,0x50,0x4b,0x4d},{0,0,0,0,0,0,0,0}};
-	void Init(){
-		
-    }
-    
     void PutPixel(unsigned px,unsigned py, unsigned pixel, int offset)
     {
         // The input value is a NES color index (with de-emphasis bits).
@@ -63,10 +58,23 @@ namespace IO {
     }
     void FlushScanline(unsigned py)
     {
-		if(py<240) video_flush_scanline(py);
+			
+		//~ if(py<240)//visible area
+			//~ video_flush_scanline(py);
+		if(py==239){//visible area
+			
+			//~ u64 t;
+			//~ do {
+				//~ t = system_gettick();
+			//~ } while((double)(t - lasttime) < interval);
+			//~ lasttime = t;
+			static int q=0;
+			if(q++%2==0)
+			video_flush_frame();
+		}
     }
 
-    u8 joy_current[2]={0,0}, joy_next[2]={0,0}, joypos[2]={0,0};
+    u8 joy_current[2], joy_next[2], joypos[2];
     void JoyStrobe(unsigned v) {
         if(v) { joy_current[0] = joy_next[0]; joypos[0]=0; }
         if(v) { joy_current[1] = joy_next[1]; joypos[1]=0; }
@@ -78,7 +86,12 @@ namespace IO {
     void JoyUpdate() {
 		joy_next[0]=player_buttons[0].read();
 		joy_next[1]=player_buttons[1].read();
-		if(kbd_iskeydown(1)) CPU::running=false;
+		if(kbd_iskeydown(1)) CPU::running=false;//Escape Key
 		
 	}
+	void Init(){
+		for(int i=0; i<2; i++)
+			joy_current[i]=joy_next[i]=joypos[i]=0;
+    }
+    
 }
