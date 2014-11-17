@@ -27,7 +27,7 @@ You may copy kernel.elf to /boot/ and add an entry at /etc/grub.d/40_custom like
 > menuentry "nek" {
 >
 >	multiboot /boot/kernel.elf
->
+>	module /boot/initrd.img
 >}
 
 Remember to update the config file:

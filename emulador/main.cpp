@@ -4,12 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include <vector>
 #include <gamepak.h>
 #include <cpu.h>
 #include <io.h>
 #include <ppu.h>
 #include "NES_logo.h"
+
 
 int play_game(const char *game){
     // Open the ROM file
@@ -67,48 +69,62 @@ int search_roms(){
 	return 0;
 }
 
-void print_menu(){
+void print_header(){
 	console_clear();
 	textmode_setforecolor(2);
-	printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\t\t\tPor Martin Villagra\n\n\n");
+	for(int i=0; i<14; i++) putchar('\n');
+	printf("\t\t\tPor Martin Villagra\n\n\n");
+	video_flush_console();
+	video_draw(-1,20,logo_data,logo_width,logo_height);
+	textmode_setforecolor(0xF);
+}
+
+const unsigned maxshow=15;
+
+void print_game_list(unsigned pos, unsigned offset){
+	const unsigned start_line=17;
+	console_clear();
 	textmode_setforecolor(7);
-	for(unsigned i=0; i<roms.size(); i++) {
-		int len=strlen(roms[i]);
+	console_move_write_cursor(0, start_line);
+	for(unsigned i=offset; i<min(maxshow+offset, roms.size()); i++) {
+		unsigned len=strlen(roms[i]);
 		roms[i][len-4]=0;
-		printf ("\t%s\n", roms[i]);
+		putchar('\t');
+		if(i==pos) {
+			textmode_setforecolor(rand()%0xF+1);
+			putchar('*');
+			textmode_setforecolor(7);
+		}
+		else putchar(' ');
+		printf(" %s\n", roms[i]);
 		roms[i][len-4]='.';
 	}
 	textmode_setforecolor(0xF);
-	video_flush_console();
-	video_draw(-1,20,logo_data,logo_width,logo_height);
-}
+	video_flush_console2(17);
 
-void put_mark(int pos, char c){
-	const int start_line=17;
-	console_move_write_cursor(5, start_line+pos);
-	putchar_now(c);
-}
-
-template <class T> const T& min (const T& a, const T& b) {
-  return (a>b)?b:a;     // or: return comp(a,b)?b:a; for version (2)
-}
-template <class T> const T& max (const T& a, const T& b) {
-  return (a<b)?b:a;     // or: return comp(a,b)?b:a; for version (2)
 }
 
 int main(){
 	if(search_roms()) return 1;
-	
-	print_menu();
-	int pos=0, c;
-	do{
-		textmode_setforecolor(rand()%0xF+1);
-		put_mark(pos, '*');
-		c=wait_scancode();
-		put_mark(pos, ' ');
-		if(c==DOWN_ARROY_KEY) pos=min(pos+1, (int)roms.size()-1);
-		else if(c==UP_ARROW_KEY) pos=max(pos-1, 0);
-		if(c==RETURN_KEY) play_game(roms[pos]), print_menu();
-	}while(1);
+	unsigned pos=0, offset=0;
+	int c;
+	while(1){
+		print_header();
+		do{
+			textmode_setforecolor(rand()%0xF+1);
+			print_game_list(pos, offset);
+			c=wait_scancode();
+			if(c==DOWN_ARROY_KEY){
+				if(pos<roms.size()-1) pos++;
+				if(pos>=maxshow+offset) offset++;
+			}
+			else if(c==UP_ARROW_KEY){
+				if(pos) pos--;
+				if(pos<offset) offset--;
+			}
+		}while(c!=RETURN_KEY);
+		print_header();
+		play_game(roms[pos]);
+	}
 	return 0;
 }

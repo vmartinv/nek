@@ -54,12 +54,6 @@ void putchar(unsigned char c) {
     //~ video_show_console();
 }
 
-void putchar_now(unsigned char c) {
-	int x=term_x, y=term_y;
-	putchar(c);
-	video_flush_char(x, y);
-}
-
 ///  Prints a basic string
 inline static void print(const char *c) {
     while(*c)

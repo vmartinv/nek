@@ -34,8 +34,8 @@ ifeq ($(debug), 1)
     CPPFLAGS += -DDEBUG -g -Og -fvar-tracking -fvar-tracking-assignments  -gdwarf-2
     LDFLAGS += -g
 else
-	CFLAGS += -O2
-	CPPFLAGS += -O2
+	CFLAGS += -O3
+	CPPFLAGS += -O3
 endif
 
 consoleonly ?= 0

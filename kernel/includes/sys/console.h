@@ -6,7 +6,6 @@ extern "C" {
 #endif
 
 void putchar(unsigned char c);
-void putchar_now(unsigned char c);
 void console_init();
 void console_printdiv();
 void console_move_write_cursor(int x, int y);

@@ -21,11 +21,8 @@ static u16 text_buffer[80*50];
 static unsigned lines, cols;
 
 // Video mode info
-static u16 screenwidth=0, screenheight=0, screendepth=0, screenbytesPerLine=0;
-static size_t nesscreensize=0;//=4*NES_WIDTH*(NES_HEIGHT+16)*sizeof(u32);
+u32 video_width=0, video_height=0, video_depth=0, video_bpl=0;
 static u8 *screenbase=0;
-static u8 *nesscreenbase=0;
-
 
 u16 *video_get_text_buffer(){
 	return text_buffer;
@@ -42,6 +39,7 @@ static void setpixel_16(uint8_t *pos, uint32_t color){
 }
 
 static void setpixel_24(uint8_t *pos, uint32_t color){
+	//~ *(u32*)pos=color;
     *pos++ = color & 255;           // BLUE
     *pos++ = (color >> 8) & 255;   	// GREEN
     *pos = (color >> 16) & 255;  	// RED
@@ -51,7 +49,7 @@ static void setpixel_32(uint8_t *pos, uint32_t color){
 	*(uint32_t*)pos=color;
 }
 
-static void (*setpixel)(uint8_t *pos, uint32_t color);
+void (*setpixel)(uint8_t *pos, uint32_t color);
 
 
 
@@ -62,39 +60,30 @@ inline static void video_putchar(int textx, int texty, u16 c) {
 	// Handle printing of a regular character
 	// Characters are 16 px tall, i.e. 0x10 bytes in stored rep
 	uint16_t *ch_ptr = font + ((c-33)&0xFF)*CHAR_HEIGHT;
-	uint8_t *write_ptr=screenbase + texty*CHAR_HEIGHT*screenbytesPerLine + textx*CHAR_WIDTH*screendepth;
+	uint8_t *write_ptr=screenbase + texty*CHAR_HEIGHT*video_bpl + textx*CHAR_WIDTH*video_depth;
 	for(uint8_t y = 0; y < CHAR_HEIGHT; y++) {
 		for(uint8_t x = 0; x < CHAR_WIDTH; x++)
 			if(1<<(CHAR_WIDTH-x-1) & *ch_ptr)
 			//~ if(x_to_bitmap[x] & *ch_ptr)
-				setpixel(write_ptr+x*screendepth, forecolor);
+				setpixel(write_ptr+x*video_depth, forecolor);
 			else 
-				setpixel(write_ptr+x*screendepth, backcolor);
-		write_ptr+=screenbytesPerLine;
+				setpixel(write_ptr+x*video_depth, backcolor);
+		write_ptr+=video_bpl;
 		ch_ptr++;
 	}
 }
 
 void video_clear(){
 	if(!initialized) return;
-	memset(screenbase, 0, screenbytesPerLine * screenheight);
-	memset(nesscreenbase, 0, nesscreensize);
+	memset(screenbase, 0, video_bpl * video_height);
 }
 
 
-
-
-//this handles pixels coming directly from the nes engine
-void video_updatepixel(int x,int y,u32 color){
-	if(!initialized) return;
-	u8 *write_ptr=nesscreenbase+y*2*NES_WIDTH*screendepth;
-	setpixel(write_ptr+2*x*screendepth, color);
-	setpixel(write_ptr+(2*x+1)*screendepth, color);
-}
 
 inline static u8 *go_offset(u8 *ptr, int x, int y){
-	return ptr+x*screendepth+y*screenbytesPerLine;
+	return ptr+x*video_depth+y*video_bpl;
 }
+
 
 void video_updatepixel_raw(int y,int x,u32 c){
 	if(!initialized) return;
@@ -102,8 +91,8 @@ void video_updatepixel_raw(int y,int x,u32 c){
 }
 
 void video_draw(int px, int py, const char *data, const int width, const int height){
-	if(px==-1) px=screenwidth/2-width;
-	if(py==-1) px=screenheight/2-height;
+	if(px==-1) px=video_width/2-width;
+	if(py==-1) px=video_height/2-height;
 	u8 *write_ptr=go_offset(screenbase, px, py);
 	u32 color;
 	for(int y=0; y<2*height; y++){
@@ -112,82 +101,67 @@ void video_draw(int px, int py, const char *data, const int width, const int hei
 					  | (((((data[1] - 33) & 0xF) << 4) | ((data[2] - 33) >> 2)) << 8)
 				      | (((((data[2] - 33) & 0x3) << 6) | ((data[3] - 33))) 		<< 0);
 			data += 4;
-			setpixel(write_ptr+2*x*screendepth, color);
-			setpixel(write_ptr+(2*x+1)*screendepth, color);
+			setpixel(write_ptr+2*x*video_depth, color);
+			setpixel(write_ptr+(2*x+1)*video_depth, color);
 		}
 		if(!(y%2)) data-=4*width;
-		write_ptr+=screenbytesPerLine;
+		write_ptr+=video_bpl;
 	}
 }
 static int offsetx, offsety;
-void video_flush_scanline(int y){
-	if(!initialized) return;
-	u8 *write_ptr=go_offset(screenbase, offsetx, offsety+y*2);
-	u8 *read_ptr=nesscreenbase+y*2*NES_WIDTH*screendepth;
-	memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
-	write_ptr+=screenbytesPerLine;
-	memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
-}
-
-void video_flush_frame(){
-	if(!initialized) return;
-	u8 *write_ptr=go_offset(screenbase, offsetx, offsety);
-	u8 *read_ptr=nesscreenbase;
-	for(int y=0;y<NES_HEIGHT;y++) {
-		memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
-		write_ptr+=screenbytesPerLine;
-		memcpy(write_ptr, read_ptr, 2*NES_WIDTH*screendepth);
-		write_ptr+=screenbytesPerLine;
-		read_ptr+=2*NES_WIDTH*screendepth;
-	}
-}
-
-void video_flush_char(int x, int y){
-	video_putchar(x, y, text_buffer[(y*cols)+x]);
+u8 *video_get_ptr(){
+	return screenbase+offsetx*video_depth+offsety*video_bpl;
 }
 
 void video_flush_console(){
 	if(!initialized) return;
-	//~ int offset=screenwidth/CHAR_WIDTH>80;
+	//~ int offset=video_width/CHAR_WIDTH>80;
 	for(unsigned y=0;y<lines;y++)
+		for(unsigned x=0;x<cols;x++)
+			video_putchar(x, y, text_buffer[(y*cols)+x]);
+}
+
+void video_flush_console2(int start){
+	if(!initialized) return;
+	//~ int offset=video_width/CHAR_WIDTH>80;
+	for(unsigned y=start;y<lines;y++)
 		for(unsigned x=0;x<cols;x++)
 			video_putchar(x, y, text_buffer[(y*cols)+x]);
 }
 
 
 void video_load_info(svga_mode_info_t *svga_mode_info){
-	screenbytesPerLine = svga_mode_info->pitch;
-	screenwidth = svga_mode_info->screen_width;
-	screenheight = svga_mode_info->screen_height;
-	screendepth = svga_mode_info->bpp / 8;
+	video_bpl = svga_mode_info->pitch;
+	video_width = svga_mode_info->screen_width;
+	video_height = svga_mode_info->screen_height;
+	video_depth = svga_mode_info->bpp / 8;
 	screenbase = (u8*)svga_mode_info->physbase;
-	lines=min(screenheight/CHAR_HEIGHT, 50);
-	cols=min(screenwidth/CHAR_WIDTH, 80);
+	lines=min(video_height/CHAR_HEIGHT, 50);
+	cols=min(video_width/CHAR_WIDTH, 80);
 }
 
 /*
  * Initialises the framebuffer console
  */
 void video_init() {
-	switch(screendepth){
+	switch(video_depth){
 	case 2: setpixel=setpixel_16; break;
 	case 3: setpixel=setpixel_24; break;
 	case 4: setpixel=setpixel_32; break;
 	}
 	//~ font=ter_i16n_raw;
 	font=nesfont_raw;
-	nesscreensize=2*NES_WIDTH*(NES_HEIGHT+16)*screendepth;
-	nesscreenbase= (u8*)malloc(nesscreensize);
+	//~ nesscreenbase= (u8*)malloc(nesscreensize);
 	//~ memset(nesscreenbase, 0, nesscreensize);
-	offsety=(screenheight-NES_HEIGHT*2)/2;
-	offsetx=(screenwidth-NES_WIDTH*2)/2;
+	offsety=(video_height-NES_HEIGHT*2)/2;
+	offsetx=(video_width-NES_WIDTH*2)/2;
 	video_clear();
 	initialized=true;
 }
 
-int video_getwidth()		{	return(screenwidth);		}
-int video_getheight()		{	return(screenheight);		}
-int video_getbpp()			{	return(screendepth*8);		}
+int video_getwidth()		{	return(video_width);		}
+int video_getheight()		{	return(video_height);		}
+int video_getbpp()			{	return(video_depth*8);		}
 #else
 void video_init(){}
 void video_load_info(svga_mode_info_t *svga_mode_info){}

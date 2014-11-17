@@ -64,6 +64,9 @@ void sleep(uint32_t ticks){
 	while(elapsed<end) dummy++;//why? maybe qemu bug TODO: check
 }
 
+uint32_t get_time(){
+	return elapsed;
+}
 static int test_timer(int id)
 {
 	printk("timer","Timer %d Called!\n", id);

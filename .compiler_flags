@@ -1,1 +1,1 @@
--ffreestanding  -std=gnu99 -nostartfiles -D_IEEE_MODE -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -O2 
+-ffreestanding  -std=gnu99 -nostartfiles -D_IEEE_MODE -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -O3 
