@@ -28,6 +28,7 @@ You may copy kernel.elf to /boot/ and add an entry at /etc/grub.d/40_custom like
 >
 >	multiboot /boot/kernel.elf
 >	module /boot/initrd.img
+>
 >}
 
 Remember to update the config file:
@@ -50,10 +51,15 @@ Dependencies
 Boot process
 ================
 GRUB (multiboot standard)
+
 kernel/arch/x86/init/boot.s	<-- calls c code, initializes stack
+
 kernel_entry() at kernel/arch/x86/init/kernel_entry.c <--base system initilization
+
 kmain() at kernel/kmain.c	<--- some services are started
+
 main() at program/main.(c|cpp)	<--- main program
+
 
 
 Folder Structure
