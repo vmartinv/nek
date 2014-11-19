@@ -4,15 +4,13 @@
 
 #include <arch/x86/pci/driver.h>
 #include <arch/x86/ports.h>
+#include <arch/x86/hda.h>
 
-//~ #include "gfx/gfx.h"
-//~ #include "net/intel.h"
-//~ #include "usb/ehci.h"
-//~ #include "usb/uhci.h"
 
 // ------------------------------------------------------------------------------------------------
 const PciDriver g_pciDriverTable[] =
 {
+	{HdaInit},
     { 0 },
 };
 
