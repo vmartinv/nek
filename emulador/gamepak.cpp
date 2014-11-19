@@ -20,8 +20,6 @@ namespace GamePak
     template<unsigned npages,unsigned char*(&b)[npages], std::vector<u8>& r, unsigned granu>
     static void SetPages(unsigned size, unsigned baseaddr, unsigned index)
     {
-			//~ printf("asdasd\n");
-			//~ video_flush_console();
         for(unsigned v = r.size() + index * size,
                      p = baseaddr / granu;
                      p < (baseaddr + size) / granu && p < npages;
@@ -49,7 +47,8 @@ namespace GamePak
         }
         if(write && addr >= 0x8000 && mappernum == 1) // e.g. Rockman 2, Simon's Quest
         {
-			
+			//~ printf("hola\n");
+			//~ video_flush_console();
             static u8 regs[4]={0x0C,0,0,0}, counter=0, cache=0;
             if(value & 0x80) { regs[0]=0x0C; goto configure; }
             cache |= (value&1) << counter;

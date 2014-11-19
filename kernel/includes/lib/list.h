@@ -33,6 +33,7 @@ void list_merge(list_t * target, list_t * source);
 
 void list_insert_after(list_t * list, list_node_t * before, list_node_t * node);
 void list_insert_before(list_t * list, list_node_t * after, list_node_t * node);
+bool list_contains(list_t *list, void *item);
 
 #define foreach(i, list) for (list_node_t * i = list->head; i != NULL; i = i->next)
 #endif

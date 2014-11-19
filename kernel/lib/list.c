@@ -33,6 +33,14 @@ void list_append(list_t * list, list_node_t * node) {
 	list->length++;
 }
 
+bool list_contains(list_t *list, void *item){
+	list_node_t *cur=list->head;
+	while(cur){
+		if(cur->value==item) return true;
+		cur=cur->next;
+	}
+	return false;
+}
 
 list_node_t * list_create_item(void * item) {
 	/* Insert an item into a list */

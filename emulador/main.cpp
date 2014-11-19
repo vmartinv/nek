@@ -114,11 +114,11 @@ int main(){
 			textmode_setforecolor(rand()%0xF+1);
 			print_game_list(pos, offset);
 			c=wait_scancode();
-			if(c==DOWN_ARROY_KEY){
+			if(c==31){
 				if(pos<roms.size()-1) pos++;
 				if(pos>=maxshow+offset) offset++;
 			}
-			else if(c==UP_ARROW_KEY){
+			else if(c==17){
 				if(pos) pos--;
 				if(pos<offset) offset--;
 			}
