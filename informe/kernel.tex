@@ -1,19 +1,16 @@
-\def\kernel{\textbf{kernel} }
-\def\SO{\textbf{kernel} }
 \chapter{El Kernel}
+SACAR:En su más simple escencia es simplemente todos los kernels un código ejecutable, el cual es generado con un compilador como cualquier otro. La diferencia es que no tiene dependencias con librerías del sistema, tales como stdio o stdlib.
 
-Un \kernel (de la raíz germánica Kern, núcleo, hueso) se define como la parte que se ejecuta en modo privilegiado (conocido también como modo núcleo), es decir con acceso irrestricto a todo el hardware del sistema. Es el principal responsable de facilitar a los distintos programas acceso seguro al hardware de la computadora y de  gestionar recursos.
 
-En su más simple escencia es simplemente un código ejecutable, el cual es generado con un compilador como cualquier otro. La diferencia es que no tiene dependencias con librerías del sistema, tales como stdio.h o stdlib.h.
+El diseño del kernel está muy lejos de lo que hoy en día se conoce como un sistema operativo completo. Se priorizó la simplicidad recortando todo lo que estaba de más, reduciendo al mínimo las capacidades del sistema. 
 
 \section{Carácteristicas}
-Empecemos por decir que lo que aquí se presenta está muy lejos de un sistema operativo completo. Se priorizó la simplicidad recortando todo lo que estaba de más, reduciendo al mínimo las capacidades del sistema. Por ejemplo la mayoría de los sistemas operativos pueden leer un programa y ejecutarlo. Nuestro querido kernel carece de esa posibilidad. A continuación se enumeran las carácteristicas principales del sistema.
 
 \begin{itemize}
-\item Dentro de la familia de arquitecturas x86\footnote{\url{http://en.wikipedia.org/wiki/X86}} se eligió i686\footnote{\url{http://en.wikipedia.org/wiki/P6_(microarchitecture)}}. Se prefirió esta por sobre x86\_64\footnote{\url{http://en.wikipedia.org/wiki/X86-64}} ya que tiene esta última no es soportada nativamente por GRUB(ver sección ~\ref{sec:booteo}). Respecto al formato de los ejecutables se eligió el que implementan los sistemas Unix\footnote{\url{http://en.wikipedia.org/wiki/Unix}}(como Linux\footnote{\url{http://en.wikipedia.org/wiki/Linux}}), el ELF \footnote{\url{http://en.wikipedia.org/wiki/Executable_and_Linkable_Format}}.
+\item Dentro de la familia de arquitecturas x86 se eligió i686. Se prefirió esta por sobre x86\_64 ya que tiene esta última no es soportada nativamente por GRUB(ver sección ~\ref{sec:booteo}). Respecto al formato de los ejecutables se eligió el que implementan los sistemas Unix(como Linux), el ELF \footnote{\url{http://en.wikipedia.org/wiki/Executable_and_Linkable_Format}}.
 \item Es un kernel \underline{monolítico}, esto significa que todos los drivers y los servicios necesarios para el funcionamiento completo del sistema están incluídos en dentro del mismo kernel. Sistemas operativos como Linux no siguen esta filosofía, ya que implicaría cargar todos los drivers al incio del sistema, el cual tiene un costo de memoria muy alto. Esto no representa un problema para nosotros puesto que la cantidad de drivers y servicios ofrecidos por el kernel es muy reducida.
 \item \underline{Monotarea}: Solo puede realizar una tarea a la vez, en nuestro caso el emulador. Para simplificar aún más incluso, el emulador es verdaderamente la \emph{única} tarea que el kernel puede ejecutar. Podría verse al emulador como un solo programa standalone, que no necesita ningún sistema operativo para ejecutarse.
-\item Sin \underline{memoria virtual}: En un sistema operativo clásico cada proceso tiene sus propio mapa de direcciones virtuales. A medida que el proceso va solicitando más memoria se busca espacio en la memoria física y luego se le asigna la encontrada a una dirección virtual, la cual es usable por el proceso. Este sistema tiene ventajas tales como la posibilidad de restringir la memoria accesible por un proceso. Es destacable que la memoria física no tiene porque restringirse solo a la RAM\footnote{Random Access Memory}, puede apuntar incluso a una posición en el disco duro. Optamos por no incluir esta opción, para simplificar el sistema. Esto significa que los punteros contienen la dirección de memoria física y que es posible acceder y leer la memoria usada por otros procesos libremente.
+\item Sin \underline{memoria virtual}: Optamos por no incluir esta opción, para simplificar el sistema. Esto significa que los punteros contienen la dirección de memoria física y que es posible acceder y leer la memoria usada por otros procesos libremente.
 \item Sin \underline{userspace}: Normalemente un sistema operativo puede dividirse en tres capas de abstracción diferentes, el hardware, el kernel y finalmente el userspace, que es donde se ejecutan las aplicaciones como Chromium, Notepad, \etc.
 \end{itemize}
 \begin{figure}[h]
@@ -29,18 +26,91 @@ En nuestro caso no tenemos userspace: el emulador, nuestro único programa a eje
 Antes de hacer el kernel, hay que tener muy en claro que es exactamente lo que tiene que hacer. Surge la pregunta entonces ¿Qué necesita como mínimo nuestro emulador? Se muestra, en orden de importancia:
 \begin{itemize}
 \item Iniciar el sistema y ejecutar el emulador. Ver sección ~\ref{sec:booteo}.
-\item Modificar libremente pixeles de la pantalla
-\item Detectar pulsaciones del teclado
-\item Poder reservar memoria dinámica *explicar que es*
-\item Cargar de alguna forma los juegos
-\item Ejecutar sonido
-\item Escribir en algún medio persistente el estado actual del juego(Guardar la partida)
+\item Modificar los pixeles de la pantalla. Ver sección ~\ref{sec:pantalla}.
+\item Detectar pulsaciones del teclado. Ver sección ~\ref{sec:teclado}.
+\item Poder reservar memoria dinámica. Ver sección ~\ref{sec:memory}.
+\item Cargar de alguna forma los juegos.
 \end{itemize}
 Pues bien, el kernel tiene que ser capaz de proveer funciones que faciliten cada una de estas tareas. En las siguientes secciones se detallaran cada una de ellas.
 
 \section{Booteo}\label{sec:booteo}
-*explicar que es un bootloader y la bios muy brevemente*
-Para evitar tener que lidiar con la BIOS y otras interfaces de bajo nivel, se eligió utilizar un bootloader ya existente y ampliamente usado: GRUB. *poner que carajos es GRUB*. En particular existe un standard llamado Multiboot\footnote{\url{http://en.wikipedia.org/wiki/Multiboot_Specification}} que especifica como estructurar un kernel para que el mismo pueda ser cargado por GRUB(o por cualquier otro bootloader que implemente Multiboot). En particular se debe elaborar un header al inicio del kernel. En esta cabecera se determina por ejemplo que modo se prefiere(texto o consola) y que función va a ser la primera en ser llamada. A su vez GRUB se comunica con la BIOS entre otras cosas y recolecta información de la máquina que luego es recibida convenientemente por nuestro kernel. De esta forma al encender la máquina se iniciará GRUB, el mismo va a poder detectar nuestro kernel y lo va a ejecutar.
+Para evitar tener que lidiar con la BIOS y otras interfaces de bajo nivel, se eligió utilizar un bootloader ya existente y ampliamente usado: GRUB.
+
+Existe un standard llamado Multiboot\footnote{\url{http://en.wikipedia.org/wiki/Multiboot_Specification}} que especifica como estructurar un kernel para que el mismo pueda ser cargado por GRUB(o por cualquier otro bootloader que implemente Multiboot). En particular se debe elaborar un header al inicio del kernel. En esta cabecera se determina por ejemplo que modo se prefiere (texto o consola) y que función va a ser la primera en ser llamada. A su vez GRUB se comunica con la BIOS entre otras cosas y recolecta información de la máquina que luego es recibida convenientemente por nuestro kernel. De esta forma al encender la máquina se iniciará GRUB, el mismo va a poder detectar y ejecutar el kernel. Ya iniciado por GRUB, está va a ser la secuencia de arranque:
 
 \subsection[boot.s]{boot.s\protect\footnotemark{}\protect\footnotetext{Ubicado en kernel/arch/x86/generic/init/boot.s}}
-El problema es que al momento en que GRUB ejecuta el kernel el stack pointer no está inicializado por lo que no es posible que la función inicial sea en C. Debemos comenzar en assembler, inicializar el stack pointer y ahí si pasar a C. Esta es la razón de la existencia del archivo boot.s, que contiene el comienzo de nuestro kernel. Allí se incluye el header de Multiboot, el espacio para el stack y una función, la primera en ser llamada al iniciar el sistema, que inicializa el stack pointer y llama a nuestra función kernel\_entry\footnote{Ubicado en kernel/arch/x86/generic/init/kernel\_entry.c}(ya en C) que continua con la inicialización del sistema.
+El problema es que al momento en que GRUB ejecuta el kernel el stack pointer no está inicializado por lo que no es posible que la función inicial sea en C. Debemos comenzar en assembler, inicializar el stack pointer y ahí si pasar a C. Esta es la razón de la existencia del archivo boot.s, que contiene el comienzo de nuestro kernel. Allí se incluye el header de Multiboot, el espacio para el stack y una función, la primera en ser llamada al iniciar el sistema, que inicializa el stack pointer y llama a nuestra función kernel\_entry (ya en C) que continua con la inicialización del sistema.
+
+\subsection[kernel\_entry]{kernel\_entry\protect\footnotemark{}\protect\footnotetext{Ubicado en kernel/arch/x86/generic/init/kernel\_entry.c}}
+En está función se inicializan en el orden dado las siguientes funciones:
+\begin{itemize}
+\item Pantalla y consola: Se hace primero para poder ver cualquier error en los siguientes pasos.
+\item Tablas globales de descripción (GDT): Indican al procesador como reaccionar antes las distintas interrupciones (a que dirección saltar).
+\item Programmable Interrupt Counter (PIT): Configura el procesador para que llame a determinada función cada cierta frecuencia fija.
+\item Page Memory Management (PMM): Ver sección ~\ref{sec:memory}.
+\item Teclado
+\end{itemize}
+
+\subsection[kmain]{kmain\protect\footnotemark{}\protect\footnotetext{Ubicado en kernel/kmain.c}}
+En esta función inicia el sistema virtual de archivos(VFS) y una pequeña librería de timers que no fue usada en el proyecto.
+
+
+\section{Pantalla}\label{sec:pantalla}
+Se aprovecho la información brindada por GRUB. La misma nos provee un puntero a un buffer lineal de la pantalla, así como sus dimensiones y profundidad (bits por pixel). En la inicialización se calcula cuantos carácteres entran por línea y se configura la manera adecuada para  escribir un pixel (dependiendo de la profundidad), entre otras cosas.
+Teniendo esto se implementaron diferentes funciones para modificar la  pantalla (escribir una imagen, un carácter, hacer un clear, \etc)\footnote{kernel/graphics/video.c}.
+
+El emulador obtiene el puntero al buffer lineal y va modificandolo con ayuda de la función setpixel, configurada previamente.
+
+Respecto a imprimir texto, las funciones involucradas en el proceso se pueden ver en los siguientes diagramas:
+\begin{tikzpicture}[node distance=.8cm, start chain=going right,]
+  \node[] () [above = 2em] {};  \node[] () [below = 2em] {};
+     \node[punktchain, join] {printf};
+     \node[punktchain, join] {putchar};
+     \node[punktchain, join] {textmode\_write};
+\end{tikzpicture}
+printf parsea la entrada, y por cada caracter que tiene que escribir llama a putchar. putchar calcula en que posición del buffer tiene que ir el carácter y llama a texmode\_write, que guarda finalmente el carácter con la información del color en el buffer.
+
+\begin{tikzpicture}[node distance=.8cm, start chain=going right,]
+  \node[] () [above = 2em] {};  \node[] () [below = 2em] {};
+	 \node[punktchain, join]{video\_flush\_console};
+	 \node[punktchain, join] {video\_putchar};
+	 \node[punktchain, join] {setpixel};
+\end{tikzpicture}
+
+Este carácter no se muestra hasta que se llama a video\_flush\_console, el cual vuelca el buffer de la consola a pantalla, carácter por carácter.
+
+\subsection{Fuente}
+Para escribir un carácter en pantalla, se guardó para cada uno de los posibles carácteres la información para dibujarlo.
+
+\setlength\fboxsep{10pt}
+\setlength\fboxrule{0pt}
+\framebox{\includegraphics[width=15cm]{diagramafuente.png}}
+
+Este fue el procedimiento para generar la fuente de 16x16 de la consola:
+\begin{enumerate}
+\item Se descargó de internet la fuente deseada (formato ttf)
+\item Se creó una imagen conteniendo todos los carácteres en una cuadricula (formato xfc)
+\item Se exportó la imagen a formado RAW (extensión .data)
+\item Se hizo makearray.cpp\footnote{en utils/fuentes}, que carga la imagen y para cada fila calcula una máscara de bits de sus pixeles y las muestra como un arreglo de C.
+\item Se agregó el mismo al codigo fuente del kernel\footnote{graphics/rsrc/nesfont.h, usando en graphics/video.c}.	
+\end{enumerate}
+
+\section{Teclado}\label{sec:teclado}
+Para detectar cuando se presiona una tecla, se configuró la interrupción IRQ1 para que llame a la función kbd\_handler\footnote{kernel/arch/x86/generic/drivers/keyboard.c}. En la misma se lee del puerto 0x60 para obtener el scancode que contiene información sobre si se soltó o presionó una tecla y cual fue.
+La función getchar que proporciona el kernel se implementó usando una arreglo circular como buffer. Sin embargo esta función no es utilizada por el emulador ya que sólo necesita saber el estado de los controles en un momento dado.
+
+
+\section{Administración de Memoria}\label{sec:memory}
+\subsection{liballoc}
+Se incorporó la librería liballoc\footnote{\url{https://github.com/blanham/liballoc}}, que provee implementaciones de las funciones malloc y free. Como liballoc no puede generar memoria de la nada, necesitamos implementarle dos funciones liballoc\_alloc y liballoc\_free\footnote{implementadas en kernel/arch/x86/pmm.c}. liballoc\_alloc recibe una la cantidad de páginas contiguas que se necesitan reservar y debe devolver un puntero a la primer página. liballoc\_free es para liberar las páginas que reservamos anteriormente, recibe el puntero que habíamos devuelto y de alguna forma deberíamos marcar esas páginas como libres para ser reutilizadas.
+
+Internamente para cada conjunto de páginas reservadas se crea un 'super bloque'. Cuando se llama a malloc se busca un super bloque con la suficiente memoria libre y se crea un bloque dentro de él, que va a contener la memoria que se va a otorgar al llamante.
+
+Un dato interesante es que como estamos implementando malloc no podríamos pedir memoria dinámica para guardar información sobre los bloques. La solución a esto fue guardar esta información directamente al comienzo del bloque. De esta forma cuando se recibe un puntero se puede saber a que bloque pertenece y obtener información del mismo(su tamaño, quien es su super bloque, etc).
+
+\subsection{Manejo de páginas}
+En primer lugar, se dividió la memoria disponible en páginas de 4KB cada una. Por cada página se guarda un bit, para saber si esa página está reservada (1) o libre (0). Como en cada entero podemos guardar 32 bits, podemos empaquetar todos los bits en $\lceil\frac{x}{32}\rceil=\frac{x+31}{32}$ enteros. Utilizando máscaras de bits podemos realizar operaciones mucho más rápidamente. En particular se necesitaron tres funciones\footnote{implementadas en kernel/arch/x86/pmm.c}.
+
+\begin{itemize}
+\item bitmap\_set: Dadas dos páginas se
+\end{itemize}

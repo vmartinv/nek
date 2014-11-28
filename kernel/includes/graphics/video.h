@@ -11,8 +11,7 @@ extern "C" {
 #define NES_WIDTH 256
 #define NES_HEIGHT 240
 struct svga_mode_info;
-void video_load_info(struct svga_mode_info *svga_mode_info);
-void video_init();
+void video_init(struct svga_mode_info *svga_mode_info);
 void video_updatepixel_raw(int y,int x,u32 c);
 extern u32 video_width, video_height, video_depth, video_bpl;
 

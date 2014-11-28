@@ -89,6 +89,7 @@ void printk(const char * type, const char *fmt, ...)
 	va_start(args, fmt);
 	vprintf(fmt,args);
 	va_end(args);
+	video_flush_console();
 }
 /**
  Logs a version of bytes that is best for human readablity. Does not print a newline 

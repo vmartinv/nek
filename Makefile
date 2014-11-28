@@ -131,9 +131,9 @@ installtodisk: kernel
 
 run: installtodisk
 ifeq ($(debug), 1)
-	@${EMU} -s -S -m 25 -serial stdio -hda disk.img
+	@${EMU} -s -S -m 25 -serial stdio -soundhw hda -hda disk.img
 else
-	@${EMU} -m 25 -serial stdio  -soundhw hda -hda disk.img
+	@${EMU} -m 25 -serial stdio -soundhw hda -hda disk.img
 endif
 
 gdb:

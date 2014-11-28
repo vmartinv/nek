@@ -4,8 +4,6 @@
 #include <graphics/svga.h>
 #include <stdlib.h>
 #include <math.h>//min & max
-//~ #include "rsrc/ter-i16b.h"
-//~ #include "rsrc/ter-i16n.h"
 #include "rsrc/nesfont.h"
 
 #ifndef CONSOLE_ONLY
@@ -64,7 +62,6 @@ inline static void video_putchar(int textx, int texty, u16 c) {
 	for(uint8_t y = 0; y < CHAR_HEIGHT; y++) {
 		for(uint8_t x = 0; x < CHAR_WIDTH; x++)
 			if(1<<(CHAR_WIDTH-x-1) & *ch_ptr)
-			//~ if(x_to_bitmap[x] & *ch_ptr)
 				setpixel(write_ptr+x*video_depth, forecolor);
 			else 
 				setpixel(write_ptr+x*video_depth, backcolor);
@@ -115,7 +112,6 @@ u8 *video_get_ptr(){
 
 void video_flush_console(){
 	if(!initialized) return;
-	//~ int offset=video_width/CHAR_WIDTH>80;
 	for(unsigned y=0;y<lines;y++)
 		for(unsigned x=0;x<cols;x++)
 			video_putchar(x, y, text_buffer[(y*cols)+x]);
@@ -123,14 +119,16 @@ void video_flush_console(){
 
 void video_flush_console2(int start){
 	if(!initialized) return;
-	//~ int offset=video_width/CHAR_WIDTH>80;
 	for(unsigned y=start;y<lines;y++)
 		for(unsigned x=0;x<cols;x++)
 			video_putchar(x, y, text_buffer[(y*cols)+x]);
 }
 
 
-void video_load_info(svga_mode_info_t *svga_mode_info){
+/*
+ * Initialises the framebuffer console
+ */
+void video_init(svga_mode_info_t *svga_mode_info){
 	video_bpl = svga_mode_info->pitch;
 	video_width = svga_mode_info->screen_width;
 	video_height = svga_mode_info->screen_height;
@@ -138,21 +136,12 @@ void video_load_info(svga_mode_info_t *svga_mode_info){
 	screenbase = (u8*)svga_mode_info->physbase;
 	lines=min(video_height/CHAR_HEIGHT, 50);
 	cols=min(video_width/CHAR_WIDTH, 80);
-}
-
-/*
- * Initialises the framebuffer console
- */
-void video_init() {
 	switch(video_depth){
 	case 2: setpixel=setpixel_16; break;
 	case 3: setpixel=setpixel_24; break;
 	case 4: setpixel=setpixel_32; break;
 	}
-	//~ font=ter_i16n_raw;
 	font=nesfont_raw;
-	//~ nesscreenbase= (u8*)malloc(nesscreensize);
-	//~ memset(nesscreenbase, 0, nesscreensize);
 	offsety=(video_height-NES_HEIGHT*2)/2;
 	offsetx=(video_width-NES_WIDTH*2)/2;
 	video_clear();

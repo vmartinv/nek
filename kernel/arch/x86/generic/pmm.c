@@ -164,12 +164,12 @@ void init_pmm(intptr_t kernelstart, size_t upper_b)
 		printk("fail","PMM:Unknown amount of free memory.\n");
 		return;
 	}
-	offset=kmalloc_get_pre_placementaddr();//start of the free memory
+	offset=(kmalloc_get_pre_placementaddr()+0x3FE)&~0x3FF;//start of the free memory
 	size_t space_left=upper_b+kernelstart-offset;
 	bitmap_sz =space_left/PAGE_SIZE/32;
 	bitmap = kmalloc(bitmap_sz*sizeof(uint32_t));//each element stores 32 pages
 	
-	offset=kmalloc_get_pre_placementaddr();//since we used kmalloc, recalculate offsets
+	offset=(kmalloc_get_pre_placementaddr()+0x3FE)&~0x3FF;//since we used kmalloc, recalculate offsets
 	space_left=upper_b+kernelstart-offset;
 	bitmap_sz =space_left/PAGE_SIZE/32;
 	memset(bitmap, 0, sizeof(uint32_t)*bitmap_sz);//set all pages free

@@ -17,13 +17,14 @@ int x86_init_descriptor_tables();
 void pit_install(uint32_t frequency);
 
 void kmain(const multiboot_info_t * multiboot);
+void kbd_init();
 
 /// The entry point for the x86 version of the NesOS Microkernel
 #if defined(__cplusplus)
 extern "C" /* Use C linkage for kernel_main. */
 #endif
 void kernel_entry(int magic, const multiboot_info_t * multiboot) {
-    video_load_info((svga_mode_info_t *)multiboot->vbe_mode_info);
+    video_init((svga_mode_info_t *)multiboot->vbe_mode_info);
     console_init();
     //~ printk("ok", (svga_mode_info_t *)multiboot->vbe_mode_info->screenheight);
     console_printdiv();
@@ -59,12 +60,12 @@ void kernel_entry(int magic, const multiboot_info_t * multiboot) {
     
     printk("ok", "Starting PMM...\n");
     init_pmm((uintptr_t)&_kernel_start, multiboot->mem_upper*1024);
-    video_init();//now we can set up buffers and other stuff
     //~ multiboot_memory_map_t * mmap = (multiboot_memory_map_t*)multiboot->mmap_addr;
     //~ while ((uint32_t)mmap < (uint32_t)multiboot->mmap_addr + (uint32_t)multiboot->mmap_length) {
          //~ printf("0x%08X->0x%08X (type %d)\n",mmap->addr,mmap->len,mmap->type);
         //~ mmap = (multiboot_memory_map_t*) ( (unsigned int)mmap + mmap->size + sizeof(unsigned int) );
     //~ }
+	kbd_init();
     printk("debug", "Exiting Boot\n");
     console_printdiv();
     kmain(multiboot);
