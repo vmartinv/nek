@@ -102,15 +102,17 @@ La función getchar que proporciona el kernel se implementó usando una arreglo 
 
 \section{Administración de Memoria}\label{sec:memory}
 \subsection{liballoc}
-Se incorporó la librería liballoc\footnote{\url{https://github.com/blanham/liballoc}}, que provee implementaciones de las funciones malloc y free. Como liballoc no puede generar memoria de la nada, necesitamos implementarle dos funciones liballoc\_alloc y liballoc\_free\footnote{implementadas en kernel/arch/x86/pmm.c}. liballoc\_alloc recibe una la cantidad de páginas contiguas que se necesitan reservar y debe devolver un puntero a la primer página. liballoc\_free es para liberar las páginas que reservamos anteriormente, recibe el puntero que habíamos devuelto y de alguna forma deberíamos marcar esas páginas como libres para ser reutilizadas.
+Se incorporó la librería liballoc\footnote{\url{https://github.com/blanham/liballoc}}, que provee implementaciones de las funciones malloc y free. Como liballoc no puede generar memoria de la nada, necesitamos implementarle dos funciones liballoc\_alloc y liballoc\_free\footnote{implementadas en kernel/arch/x86/pmm.c}. liballoc\_alloc recibe la cantidad de páginas contiguas que se necesitan reservar y debe devolver un puntero a la primer página. liballoc\_free es para liberar las páginas que reservamos anteriormente, recibe el puntero que habíamos devuelto y de alguna forma deberíamos marcar esas páginas como libres para ser reutilizadas.
 
 Internamente para cada conjunto de páginas reservadas se crea un 'super bloque'. Cuando se llama a malloc se busca un super bloque con la suficiente memoria libre y se crea un bloque dentro de él, que va a contener la memoria que se va a otorgar al llamante.
 
 Un dato interesante es que como estamos implementando malloc no podríamos pedir memoria dinámica para guardar información sobre los bloques. La solución a esto fue guardar esta información directamente al comienzo del bloque. De esta forma cuando se recibe un puntero se puede saber a que bloque pertenece y obtener información del mismo(su tamaño, quien es su super bloque, etc).
 
 \subsection{Manejo de páginas}
-En primer lugar, se dividió la memoria disponible en páginas de 4KB cada una. Por cada página se guarda un bit, para saber si esa página está reservada (1) o libre (0). Como en cada entero podemos guardar 32 bits, podemos empaquetar todos los bits en $\lceil\frac{x}{32}\rceil=\frac{x+31}{32}$ enteros. Utilizando máscaras de bits podemos realizar operaciones mucho más rápidamente. En particular se necesitaron tres funciones\footnote{implementadas en kernel/arch/x86/pmm.c}.
+En primer lugar, se dividió la memoria disponible en páginas de 4KB cada una. Por cada página se guarda un bit, para saber si esa página está reservada (1) o libre (0). Como en cada entero podemos guardar 32 bits, podemos empaquetar todos los bits en $\lceil\frac{x}{32}\rceil=\lfloor\frac{x+31}{32}\rfloor$ enteros. Utilizando máscaras de bits podemos realizar operaciones necesarias mucho más rápidamente. En particular se necesitaron tres funciones auxiliar\footnote{implementadas en kernel/arch/x86/pmm.c}.
 
 \begin{itemize}
-\item bitmap\_set: Dadas dos páginas se
+\item bitmap\_set: Dado un intervalo en el bitset, setear todos los bits que estan dentro de él. Es usada para marcar las páginas como ocupadas.
+\item bitmap\_clear: Análogo a la anterior, pero para limpiar los bits.
+\item fits_inside: Busca dentro de un entero (32 bits) si hay un espacio libre. 
 \end{itemize}
