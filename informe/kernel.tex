@@ -29,7 +29,7 @@ Antes de hacer el kernel, hay que tener muy en claro que es exactamente lo que t
 \item Modificar los pixeles de la pantalla. Ver sección ~\ref{sec:pantalla}.
 \item Detectar pulsaciones del teclado. Ver sección ~\ref{sec:teclado}.
 \item Poder reservar memoria dinámica. Ver sección ~\ref{sec:memory}.
-\item Cargar de alguna forma los juegos.
+\item Cargar de alguna forma los juegos. Ver sección ~\ref{sec:vfs}.
 \end{itemize}
 Pues bien, el kernel tiene que ser capaz de proveer funciones que faciliten cada una de estas tareas. En las siguientes secciones se detallaran cada una de ellas.
 
@@ -48,7 +48,7 @@ En está función se inicializan en el orden dado las siguientes funciones:
 \item Tablas globales de descripción (GDT): Indican al procesador como reaccionar antes las distintas interrupciones (a que dirección saltar).
 \item Programmable Interrupt Counter (PIT): Configura el procesador para que llame a determinada función cada cierta frecuencia fija.
 \item Page Memory Management (PMM): Ver sección ~\ref{sec:memory}.
-\item Teclado
+\item Teclado: Ver sección ~\ref{sec:teclado}.
 \end{itemize}
 
 \subsection[kmain]{kmain\protect\footnotemark{}\protect\footnotetext{Ubicado en kernel/kmain.c}}
@@ -69,7 +69,6 @@ Respecto a imprimir texto, las funciones involucradas en el proceso se pueden ve
      \node[punktchain, join] {textmode\_write};
 \end{tikzpicture}
 printf parsea la entrada, y por cada caracter que tiene que escribir llama a putchar. putchar calcula en que posición del buffer tiene que ir el carácter y llama a texmode\_write, que guarda finalmente el carácter con la información del color en el buffer.
-
 \begin{tikzpicture}[node distance=.8cm, start chain=going right,]
   \node[] () [above = 2em] {};  \node[] () [below = 2em] {};
 	 \node[punktchain, join]{video\_flush\_console};
@@ -86,9 +85,9 @@ Para escribir un carácter en pantalla, se guardó para cada uno de los posibles
 \setlength\fboxrule{0pt}
 \framebox{\includegraphics[width=15cm]{diagramafuente.png}}
 
-Este fue el procedimiento para generar la fuente de 16x16 de la consola:
+Este fue el procedimiento para generar la fuente de 16x16 de la consola, el cual nos evita tener que realizar a mano cada carácter.
 \begin{enumerate}
-\item Se descargó de internet la fuente deseada (formato ttf)
+\item Se descargó de internet la fuente deseada, inspirada en la que usaban los juegos de la consola (formato ttf)
 \item Se creó una imagen conteniendo todos los carácteres en una cuadricula (formato xfc)
 \item Se exportó la imagen a formado RAW (extensión .data)
 \item Se hizo makearray.cpp\footnote{en utils/fuentes}, que carga la imagen y para cada fila calcula una máscara de bits de sus pixeles y las muestra como un arreglo de C.
@@ -99,20 +98,46 @@ Este fue el procedimiento para generar la fuente de 16x16 de la consola:
 Para detectar cuando se presiona una tecla, se configuró la interrupción IRQ1 para que llame a la función kbd\_handler\footnote{kernel/arch/x86/generic/drivers/keyboard.c}. En la misma se lee del puerto 0x60 para obtener el scancode que contiene información sobre si se soltó o presionó una tecla y cual fue.
 La función getchar que proporciona el kernel se implementó usando una arreglo circular como buffer. Sin embargo esta función no es utilizada por el emulador ya que sólo necesita saber el estado de los controles en un momento dado.
 
-
 \section{Administración de Memoria}\label{sec:memory}
-\subsection{liballoc}
-Se incorporó la librería liballoc\footnote{\url{https://github.com/blanham/liballoc}}, que provee implementaciones de las funciones malloc y free. Como liballoc no puede generar memoria de la nada, necesitamos implementarle dos funciones liballoc\_alloc y liballoc\_free\footnote{implementadas en kernel/arch/x86/pmm.c}. liballoc\_alloc recibe la cantidad de páginas contiguas que se necesitan reservar y debe devolver un puntero a la primer página. liballoc\_free es para liberar las páginas que reservamos anteriormente, recibe el puntero que habíamos devuelto y de alguna forma deberíamos marcar esas páginas como libres para ser reutilizadas.
+En primer lugar, se dividió la memoria disponible en páginas de 4KB cada una. Se decidió utilizar la librería liballoc, cuyo funcionamiento se explica más adelante. La librería requiere que implementemos dos funciones: liballoc\_alloc y liballoc\_free\footnote{implementadas en kernel/arch/x86/pmm.c}.
 
-Internamente para cada conjunto de páginas reservadas se crea un 'super bloque'. Cuando se llama a malloc se busca un super bloque con la suficiente memoria libre y se crea un bloque dentro de él, que va a contener la memoria que se va a otorgar al llamante.
+\emph{liballoc\_alloc} recibe la cantidad de páginas contiguas que se necesitan reservar y debe devolver un puntero a la primer página.
 
-Un dato interesante es que como estamos implementando malloc no podríamos pedir memoria dinámica para guardar información sobre los bloques. La solución a esto fue guardar esta información directamente al comienzo del bloque. De esta forma cuando se recibe un puntero se puede saber a que bloque pertenece y obtener información del mismo(su tamaño, quien es su super bloque, etc).
+\emph{liballoc\_free} es para liberar las páginas que reservamos anteriormente, recibe el puntero que habíamos devuelto y de alguna forma deberíamos marcar esas páginas como libres para ser reutilizadas.
 
-\subsection{Manejo de páginas}
-En primer lugar, se dividió la memoria disponible en páginas de 4KB cada una. Por cada página se guarda un bit, para saber si esa página está reservada (1) o libre (0). Como en cada entero podemos guardar 32 bits, podemos empaquetar todos los bits en $\lceil\frac{x}{32}\rceil=\lfloor\frac{x+31}{32}\rfloor$ enteros. Utilizando máscaras de bits podemos realizar operaciones necesarias mucho más rápidamente. En particular se necesitaron tres funciones auxiliar\footnote{implementadas en kernel/arch/x86/pmm.c}.
+Por cada página se guarda un bit, para saber si esa página está reservada (1) o libre (0). Como en cada entero podemos guardar 32 bits, podemos empaquetar todos los bits en $\lceil\frac{x}{32}\rceil=\lfloor\frac{x+31}{32}\rfloor$ enteros, donde x es la cantidad de páginas. Utilizando máscaras de bits podemos realizar las operaciones necesarias más rápidamente. En particular se necesitaron tres funciones auxiliares\footnote{implementadas en kernel/arch/x86/pmm.c}.
 
 \begin{itemize}
-\item bitmap\_set: Dado un intervalo en el bitset, setear todos los bits que estan dentro de él. Es usada para marcar las páginas como ocupadas.
-\item bitmap\_clear: Análogo a la anterior, pero para limpiar los bits.
-\item fits_inside: Busca dentro de un entero (32 bits) si hay un espacio libre. 
+\item bitmap\_set(l, r): Dado un intervalo en el bitset, setear todos los bits que estan dentro de él. Es usada para marcar las páginas como ocupadas.
+\item bitmap\_clear(l, r): Análogo a la anterior, pero para limpiar los bits.
+\item fits\_inside(x, v): Busca dentro de un entero v (32 bits) si hay x bits libres contiguos. 
 \end{itemize}
+Por ejemplo, para implementar bitmap\_set, primero se activaron los bits de los extremos usando máscaras de bits y luego los restantes mediante una lamada a memset. Se muestra un ejemplo en la figura ~\ref{fig:bitmap} (usando 8 bits en lugar de 32).
+
+\begin{figure}[H]\caption{\label{fig:bitmap}}
+\centering\def\svgwidth{\columnwidth}
+\includesvg{bitmap_diagram}
+\end{figure}
+\subsection{liballoc}
+Internamente para cada conjunto de páginas reservadas se crea un 'super bloque'. Cuando se llama a malloc se busca un super bloque con la suficiente memoria libre y se crea un bloque dentro de él, que va a contener la memoria que se va a otorgar al llamante.
+
+Un dato interesante es que como estamos implementando malloc no podríamos pedir más memoria dinámica para guardar información sobre los bloques. La solución a esto fue guardar esta información directamente al comienzo de cada bloque. 
+Para recorrer estas estructuras se usan listas enlazadas, los punteros al siguiente/anterior tambień se encuentran en las cabeceras de cada bloque, como se puede apreciar en la figura ~\ref{fig:liballoc}.
+
+\begin{figure}[H]\caption{\label{fig:liballoc}}
+\centering\def\svgwidth{\columnwidth}
+\small\includesvg{liballoc_diagram}
+\end{figure}
+
+Otra ventaja de este sistema es que uando se recibe un puntero a la User Data, se puede acceder a su cabecera y obtener la información del bloque al que pertenece.
+
+\section{Sistema virtual de archivos}\label{sec:vfs}
+Necesitamos poder cargar los juegos desde algún lugar para poder emularlos. Como leer de discos puede ser relativamente complejo, se opto por un initrd\footnote{\url{http://en.wikipedia.org/wiki/Initrd}}. Esto es básicamente un archivo que se carga directamente en la RAM al inicio del sistema. Afortunadamente la carga de este archivo es realizada enteramente por GRUB antes de bootear el kernel. GRUB proporciona un puntero al inicio del archivo en RAM y el kernel se encarga de procesarlo.
+\begin{figure}[H]\caption{\label{fig:initrd}}
+\centering\def\svgwidth{\columnwidth}
+\small\includesvg{initrd_diagram}
+\end{figure}
+ El formato del initrd que se utilizó se ejemplifica en la figura ~\ref{fig:initrd}. El mismo consta simplemente de los archivos colocados uno tras otro,junto con una cabecera que contiene el tamaño, nombre y un valor para verificar integridad.
+ Para crear este initrd se programó initrd\_gen\footnote{utils/initrd\_gen.c}, el cual recibe los archivos y crea el la imagen lista para ser cargada por GRUB. En el archivo initrd.c\footnote{kernel/fs/initrd.c} se implementó la inicialización del initrd, junto con sus procedimientos para leer y listar los archivos.
+ 
+

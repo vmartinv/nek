@@ -7,6 +7,19 @@
 \usepackage{tikz}
 \usepackage[all]{hypcap}
 \usepackage[section]{placeins}
+\usepackage{wrapfig}
+\usepackage{float}
+\newcommand{\executeiffilenewer}[3]{%
+\ifnum\pdfstrcmp{\pdffilemoddate{#1}}%
+{\pdffilemoddate{#2}}>0%
+{\immediate\write18{#3}}\fi%
+}
+\newcommand{\includesvg}[1]{%
+\executeiffilenewer{#1.svg}{#1.pdf}%
+{inkscape -z -D --file=#1.svg %
+--export-pdf=#1.pdf --export-latex}%
+\input{#1.pdf_tex}%
+}
 \renewcommand{\ttdefault}{lmtt}
 \usetikzlibrary{calc,trees,positioning,arrows,chains,shapes.geometric,%
     decorations.pathreplacing,decorations.pathmorphing,shapes,%
@@ -62,5 +75,7 @@ El objetivo del trabajo es construir un emulador de la videoconsola Nintendo Ent
 %-----------------------------------------------------------
 \include{intro}
 \include{kernel}
+\include{emulador}
+\include{biblio}
 %-----------------------------------------------------------
 \end{document}
