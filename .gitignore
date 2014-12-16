@@ -1,6 +1,7 @@
 .compiler_flags
 disk.img
 *.o
+*.pdf_tex
 bin/*
 doc
 iso/boot/*.img

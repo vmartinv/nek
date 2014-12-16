@@ -33,7 +33,7 @@ void kmain(const multiboot_info_t * multiboot)
 	start_service("vfsd",1,init_vfs((void*)*((u32*)multiboot->mods_addr)));
 	//~ start_service("filesystemd",1,init_fs(multiboot));
 	start_service("timerd",1,init_timer());
-	PciInit();
+	//~ PciInit();
 	//~ bus_sys_init();
 	//~ pci_init();
 	//~ pci_load_drivers();
