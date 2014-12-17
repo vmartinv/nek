@@ -1,0 +1,459 @@
+On Thu, 18 Oct 2012, V. W. wrote:
+> About this base64 version of yours. Can you explain it further,
+> encoding / decoding ?
+
+If you are referring to the 6-bit one (the standard version), I do not
+think I can do a much better job explaining it than I already did in
+the 1000 subscribers special video. If you have difficulty with
+understanding the basic concept behind binary numbers, I suggest you
+read up and study about them first. Once you understand how bits and
+binary numbers work, it becomes much more easier to understand.
+
+Assuming the original data consists of 8-bit bytes, which may look
+like this for example (please view this email in fixed-width font):
+
+  11010101 11101101 00110101 11110000 00001111 01010101 10101010
+  aaaaaaaa bbbbbbbb cccccccc dddddddd eeeeeeee ffffffff gggggggg
+
+(The "aa", "bb" are there just to label the bytes for illustration
+ purposes, so in the next part you know which bits is where.)
+
+BASE64 just splits that bitstream into groups of 6 bits:
+(Each group is populated from right to left.)
+
+  010101 110111 011110 001101 110000 111111 010000 010101 101010 000010
+  aaaaaa bbbbaa ccbbbb cccccc dddddd eeeedd ffeeee ffffff gggggg ____gg
+
+Each 6-bit item is treated as a number:
+
+  21 55 30 13 48 63 16 21 42 2
+
+And the number is used to index the ASCII character table,
+with 0 being the first character and 63 being the last:
+
+  ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+  0123456789012345678901234567890123456789012345678901234567890123
+  0000000000111111111122222222223333333333444444444455555555556666
+
+Resulting in the following encoding:
+
+  V3eNw/QVqC
+
+Decoding the string is just a matter of doing the same in reverse.
+
+E.g. for the first character, "V", you search the ASCII table above
+to find it. It is found in the 21th position (the counting begins
+from 0, not from 1).
+The decimal number 21 is "010101" in binary.
+
+The next character, "3", is in the 55th position, so it corresponds
+to the binary number "110111". And so on. So we get the beginning
+of the bitstream:
+  010101 110111 ... and so on.
+From which we get the first 8-bit item as 11010101, and so on.
+
+You get a similar explanation at: http://en.wikipedia.org/wiki/BASE64
+
+======================================
+
+The 8-bit encoding that I used works for that very particular data only.
+Trying to understand it is not very relevant, because it is subject
+to the very particular data used in the emulator, and the encoding
+was partially machine-generated.
+
+But I can walk you through it anyway.
+
+Quoting the original code, first:
+
+  // Define the opcode decoding matrix, which decides which micro-operations constitute
+  // any particular opcode. (Note: The PLA of 6502 works on a slightly different principle.)
+  enum { o8 = op/8, o8m = 1 << (op%8) };
+
+  // Fetch op'th item from a bitstring encoded in a data-specific variant of base64,
+  // where each character transmits 8 bits of information rather than 6.
+  // This peculiar encoding was chosen to reduce the source code size.
+  // Enum temporaries are used in order to ensure compile-time evaluation.
+  #define t(s,code) { enum { \
+      i=o8m & (s[o8]>90 ? (130+" (),-089<>?BCFGHJLSVWZ[^hlmnxy|}"[s[o8]-94]) \
+                        : (s[o8]-" (("[s[o8]/39])) }; if(i) { code; } }
+
+  ...
+  /* Store modified value (memory) */
+  t("kgnkkgnkkgnkkgnkzy|J    kgnkkgnk ", WB(addr+d, t))
+  t("                   q             ", WB(wrap(addr, addr+d), t &= ((addr+d) >> 8))) // [shx,shy,shs,sha?]
+
+  /* Some operations used up one clock cycle that we did not account for yet */
+  t("rpstljstqjstrjst - - - -kjstkjst/", tick()) // nop,flag ops,inc,dec,shifts,stack,transregister,interrupts
+  ... 
+
+First, let's take the code as-is and add some NEW comments:
+
+    /* Define the position in the character string to sample.
+     * 8 bits are encoded per character, so we divide the opcode
+     * number by 8, in order to land in the correct character.
+     */
+    o8 = op / 8;
+
+    /* Which bit to sample? Well, it is obviously the remainder
+     * of that division (op % 8). This gets us a number between 0..7.
+     * The 1 << x part just changes the bit-index (0,1,2,3,4,5,6,7)
+     * into a bitmask (binary 000001, 000010, 000100, 001000, and so on).
+     */
+    o8m = 1 << (op % 8);
+
+    /* Determine whether the bit matches. */
+    i = o8m & (s[o8]>90
+                  ? (130+" (),-089<>?BCFGHJLSVWZ[^hlmnxy|}"[s[o8]-94])
+                  : (s[o8]-" (("[s[o8]/39])
+              );
+
+    /* If it matched, do the micro-operation. */
+    if(i) { code; }
+
+So what happens in the "i = .." ?
+I will extract it progressively into smaller pieces, so it becomes
+easier to understand.
+
+FIRST LAYER:
+
+    /* Let's rename the o8m variable into something more descriptive. */
+    int expected_bit = o8m;
+
+    /* We took the character from the string. It still contains
+     * the 8 bits worth of information packed in a peculiar manner.
+     */
+    char c = s[o8];
+
+    /* I just replaced every occurrence of "s[o8]" with "c". */
+    i = expected_bit & (c>90
+                            ? (130+" (),-089<>?BCFGHJLSVWZ[^hlmnxy|}"[c-94])
+                            : (c-" (("[c/39])
+                       );
+
+SECOND LAYER:
+
+    char c = s[o8];
+
+    /* This expression decodes the ASCII character into a 8-bit integer. */
+    int eightbitpattern = c>90
+                              ? (130+" (),-089<>?BCFGHJLSVWZ[^hlmnxy|}"[c-94])
+                              : (c-" (("[c/39]);
+
+    /* And this is the condition that is tested. We test whether
+     * expected_bit (which contains the bit that SHOULD match)
+     * is found in the extracted 8-bit pattern.
+     */
+    i = expected_bit & eightbitpattern;
+
+THIRD LAYER:
+
+    char c = s[o8];
+
+    /* You know, the ?: expression is just a compact way of saying "if". */
+    int eightbitpattern;
+
+    if(c > 90)
+        eightbitpattern = (130 + " (),-089<>?BCFGHJLSVWZ[^hlmnxy|}"[c - 94]);
+    else
+        eightbitpattern = (c - " (("[c / 39]);
+
+    i = expected_bit & eightbitpattern;
+
+FOURTH LAYER:
+
+    char c = s[o8];
+
+    int eightbitpattern;
+    if(c > 90)
+    {
+        /* String constants are really just arrays of integers.¹ */
+        int table1[] = { 32, 40, 41, 44, 45, 48, 56, 57, 60, 62, 63, 66, 67,
+                         70, 71, 72, 74, 76, 83, 86, 87, 90, 91, 94, 104,
+                         108, 109, 110, 120, 121, 124, 125 };
+        eightbitpattern = (130 + table1[c - 94]);
+    }
+    else
+    {
+        int table2[] = { 32, 40, 40 };
+        eightbitpattern = (c - table2[c / 39]);
+    }
+
+    i = expected_bit & eightbitpattern;
+
+
+    ¹ Technically, it is a "char" table. I used "int" here for clarity,
+      emphasizing the fact that its purpose is to be a table of integers.
+      I also omitted stuff like "static" and "const" that are not relevant
+      for the explanation.
+
+FIFTH AND FINAL LAYER:
+
+    char c = s[o8];
+
+    int eightbitpattern;
+    if(c > 90)
+    {
+        int v = c - 94;
+        int table1[] = { 32, 40, 41, 44, 45, 48, 56, 57, 60, 62, 63, 66, 67,
+                         70, 71, 72, 74, 76, 83, 86, 87, 90, 91, 94, 104,
+                         108, 109, 110, 120, 121, 124, 125 };
+        eightbitpattern = (130 + table1[v]);
+
+        /* ASCII characters with values above 90 are made to correspond
+         * to 8-bit bytes according to the following lookup table:
+         *
+         *   character   desired value (decimal and binary)
+         *   ----------  -------------------------------
+         *   94   '^'    162    10100010
+         *   95   '_'    170    10101010
+         *   96   '`'    171    10101011
+         *   97   'a'    174    10101110
+         *   98   'b'    175    10101111
+         *   99   'c'    178    10110010
+         *   100  'd'    186    10111010
+         *   101  'e'    187    10111011
+         *   102  'f'    190    10111110
+         *   103  'g'    192    11000000
+         *   104  'h'    193    11000001
+         *   105  'i'    196    11000100
+         *   106  'j'    197    11000101
+         *   107  'k'    200    11001000
+         *   108  'l'    201    11001001
+         *   109  'm'    202    11001010
+         *   110  'n'    204    11001100
+         *   111  'o'    206    11001110
+         *   112  'p'    213    11010101
+         *   113  'q'    216    11011000
+         *   114  'r'    217    11011001
+         *   115  's'    220    11011100
+         *   116  't'    221    11011101
+         *   117  'u'    224    11100000
+         *   118  'v'    234    11101010
+         *   119  'w'    238    11101110
+         *   120  'x'    239    11101111
+         *   121  'y'    240    11110000
+         *   122  'z'    250    11111010
+         *   123  '{'    251    11111011
+         *   124  '|'    254    11111110
+         *   125  '}'    255    11111111
+         *
+         * The 130 + value was there just to make the array values
+         * fit in ASCII encoding.
+         * E.g. 162-130 = 32 (' '), 255-130 = 125 ('}')
+         */
+    }
+    else
+    {
+        /* ASCII characters with values UNDER 90 are made to correspond
+         * to 8-bit bytes according to the following lookup table
+         * (other values were never used):
+         *
+         *   character   desired value (decimal and binary)
+         *   ----------  -------------------------------
+         *    32 ' '      0 00000000
+         *    33 '!'      1 00000001
+         *    42 '*'      2 00000010
+         *    44 ','      4 00000100
+         *    45 '-'      5 00000101
+         *    47 '/'      7 00000111
+         *    48 '0'      8 00001000
+         *    50 '2'     10 00001010
+         *    51 '3'     11 00001011
+         *    52 '4'     12 00001100
+         *    53 '5'     13 00001101
+         *    54 '6'     14 00001110
+         *    56 '8'     16 00010000
+         *    57 '9'     17 00010001
+         *    74 'J'     34 00100010
+         *    88 'X'     48 00110000
+         *    90 'Z'     50 00110010
+         *
+         * This was implemented by observing patterns in the numbers,
+         * and thus devising a method in which an offset is added
+         * to the value depending on the magnitude of the number.
+         */
+        int magnitude = c / 39;
+        int table2[] = { 32, 40, 40 };
+        int transformation = table2[magnitude];
+        eightbitpattern = (c - transformation);
+    }
+
+    i = expected_bit & eightbitpattern;
+
+Basically why this worked at all was because there were only 49 distinct
+values in my original array of 8-bit values. I just created a mapping
+that transforms ASCII characters into those 8-bit values, and at that,
+one that can be implemented in minimal amount of C code.
+
+Essentually, the "i" expression could be "reduced" into this:
+
+    /* List of characters used in the string */
+    char pattern[] = { ' ', '!', '*', ',', '-', '/', '0', '2', '3', '4', '5',
+                       '6', '8', '9', 'J', 'X', 'Z', '^', '_', '`', 'a', 'b',
+                       'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+                       'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+                       'y', 'z', '{', '|', '}' };
+
+    /* List of 8-bit values those characters correspond to */
+    int values[]   = {0,1,2,4,5,7,8,10,11,12,13,14,16,17,34,48,50,
+                      162,170,171,174,175,178,186,187,190,192,
+                      193,196,197,200,201,202,204,206,213,216,217,220,
+                      221,224,234,238,239,240,250,251,254,255};
+
+    int eightbitpattern;
+
+    /* Find the position of the character in the encoding */
+    for(int searchposition = 0; searchposition < sizeof(pattern); ++searchposition)
+    {
+        if(c == pattern[searchposition])
+        {
+            /* Translate the position into the 8-bit value */
+            eightbitpattern = values[searchposition];
+            break;
+        }
+    }
+
+    /* Got the expected bit, and got the pattern from this character.
+     * Test whether the expected bit is found in the 8-bit pattern.
+     */
+    i = expected_bit & eightbitpattern;
+
+But this would not have been compact, nor could it have been
+evaluated at compile-time.
+
+======================================
+
+Going in reverse, the process was this: I have got a table of 8-bit
+integer values. First, I figure out all the distinct bytes contained
+within that table. The list is this (the same as shown above):
+
+    int values[]   = {0,1,2,4,5,7,8,10,11,12,13,14,16,17,34,48,50,
+                      162,170,171,174,175,178,186,187,190,192,
+                      193,196,197,200,201,202,204,206,213,216,217,220,
+                      221,224,234,238,239,240,250,251,254,255};
+
+Then, I figure a way to map those values into ASCII characters.
+
+I notice there are clearly two different sections in the values:
+One for 0-50, and one for 162-255.
+
+I decide that the 162-255 region (32 items long) can be
+encoded in consecutive ASCII characters using a lookup table:
+   94 to 127 ('^' to '}'), for a total of 32 characters.
+The selection of 94 was just arbitrary; I chose it for
+prettiness and to make it easier to encode the 0-50 region.
+
+The 0-50 region could also be encoded in consecutive values...
+I.e. 32 to 82 (' ' to 'R'), but this would rather inconveniently
+include the '"' character, which requires escaping, making the
+string table untidy. So I wanted to skip past that. 0 and 1
+get encoded as 32 and 33 (' ' and '!') respectively, but 2,
+which would otherwise make 34 ('"') gets encoded as 40 ('*').
+40 here is again just arbitrary. I chose numbers that result
+in a pretty table.
+I could have also encoded the 0-50 region by subtracting from 91,
+but I preferred to have an encoding where space corresponds to zero;
+it would look prettier.
+
+Now in retrospect, I COULD probably have gone even further.
+Perhaps encode 12-bit or 16-bit entities at once.
+But I chose to remain in 8 bits, because it already resulted
+in narrow character strings enough, and it DID visually
+present information:  Those who have some knowledge about
+the 6502 architecture can already observe clear patterns
+in it which correspond to different addressing modes,
+and regions where certain instructions reside.
+
+======================================
+
+For curiosity's sake, here is a version that uses 32-bit entities:
+Notice how the string constants are even shorter now.
+(ceil(259/32) = 9 characters needed to represent 259 bits of data.)
+
+    static constexpr unsigned values[83]={ 0, 1, 0, 2, 4, 7, 256, 257, 1280, 2048,
+    2564, 2565, 3072, 3076, 4096, 4112, 4113, 4369, 65536, 65537, 917514, 917515,
+    921610, 15728650, 16777216, 16777217, 16777472, 16780288, 16780544,
+    16842752, 16842753, 16843009, 83887104, 83887360, 134217728, 168689664,
+    201326592, 269488401, 286265617, 353370112, 353370369, 353370384, 353370385,
+    353371136, 353374481, 587133178, 808452106, 838991872, 2863309482U,
+    2863309483U, 2863311530U, 2863312558U, 2863312814U, 2863313594U, 2863315643U,
+    2863316670U, 2863379130U, 3356229632U, 3368861896U, 3368862152U, 0,
+    3368862920U, 3368862924U, 3368863176U, 3368864972U, 3402498048U, 3435973836U,
+    3623878656U, 3941523690U, 3941527278U, 3941527534U, 3941527802U, 3941530619U,
+    3941531390U, 3941531643U, 4042260490U, 4194365440U, 4194365441U, 4195221504U,
+    4211011834U, 4211077370U, 4211077371U, 4278124543U };
+    
+    #define t(s, code) { enum { i = values[s[op/32]-32] & (1u << (op%32)) }; \
+                         if(i) { code; } }
+    
+    /* Decode address operand */
+    t("        !", addr = 0xFFFA) // NMI vector location
+    t("        #", addr = 0xFFFC) // Reset vector location
+    t("!       $", addr = 0xFFFE) // Interrupt vector location
+    t("pqpppppp ", addr = RB(PC++))
+    t("kkkkNNkk ", d = X) // register index
+    t("CCCCaaCC ", d = Y)
+    t("77777777 ", addr=u8(addr+d); d=0; tick())              // add zeropage-index
+    t("lmllllll ", addr=u8(addr);   addr+=256*RB(PC++))       // absolute address
+    t("54464444%", addr=RB(c=addr); addr+=256*RB(wrap(c,c+1)))// indirect w/ page wrap
+    t("OOOO nOO ", Misfire(addr, addr+d)) // abs. load: extra misread when cross-page
+    t("YYYYn YY ", RB(wrap(addr, addr+d)))// abs. store: always issue a misread
+    /* Load source operand */
+    t("SWT-R(R  ", t &= A) // Many operations take A or X as operand. Some try in
+    t("    b ,1 ", t &= X) // error to take both; the outcome is an AND operation.
+    t("    F 1  ", t &= Y) // sty,dey,iny,tya,cpy
+    t("     D   ", t &= S) // tsx, las
+    t("?===2===%", t &= P.raw|pbits; c = t)// php, flag test/set/clear, interrupts
+    t("PUP   V0 ", c = t; t = 0xFF)        // save as second operand
+    t("dgdd ogg ", t &= RB(addr+d)) // memory operand
+    t("****++++ ", t &= RB(PC++))   // immediate operand
+    /* Operations that mogrify memory operands directly */
+    t(" /       ", P.V = t & 0x40; P.N = t & 0x80) // bit
+    t(" ^ `     ", sb = P.C)       // rol,rla, ror,rra,arr
+    t("`` )     ", P.C = t & 0x80) // rol,rla, asl,slo,[arr,anc]
+    t("  `^     ", P.C = t & 0x01) // lsr,sre, ror,rra,asr
+    t("]]]]& _[ ", WB(addr+d, t))  // read-modify-write instructions (dummy write)
+    t("^^       ", t = (t << 1) | (sb << 0))
+    t("  ``     ", t = (t >> 1) | (sb << 7))
+    t("    & ]  ", t = u8(t - 1))  // dec,dex,dey,dcp
+    t("      &[ ", t = u8(t + 1))  // inc,inx,iny,isb
+    /* Store modified value (memory) */
+    t("ZZZZM ZZ ", WB(addr+d, t))
+    t("    c    ", WB(wrap(addr, addr+d), t &= ((addr+d) >> 8))) // [shx,shy,shs,sha?]
+    /* Some operations used up one clock cycle that we did not account for yet */
+    t("LHIJ@AGK%", tick()) // nop,flag ops,inc,dec,shifts,stack,transregister,interrupts
+    /* Stack operations and unconditional jumps */
+    t(" &!&     ", tick(); t = Pop())                        // pla,plp,rti
+    t("  !!     ", RB(PC++); PC = Pop(); PC |= (Pop() << 8)) // rti,rts
+    t("   !     ", RB(PC++))  // rts
+    t("!!      %", d=PC+(op?-1:1); Push(d>>8); Push(d))      // jsr, interrupts
+    t("!!..    %", PC = addr) // jmp, jsr, interrupts
+    t("' &     %", Push(t))   // pha, php, interrupts
+    /* Bitmasks */
+    t(">===2===%", t = 1)
+    t("22    == ", t <<= 1)
+    t("32== 888%", t <<= 2)
+    t("2222 8   ", t <<= 4)
+    t("8 8  88R ", t = u8(~t)) // sbc, isb,      clear flag
+    t("Q8 8   8%", t = c | t)  // ora, slo,      set flag
+    t("=X=22==2 ", t = c & t)  // and, bit, rla, clear/test flag
+    t("  P      ", t = c ^ t)  // eor, sre
+    /* Conditional branches */
+    t(" 2 2 2 2 ", if(t)  { tick(); Misfire(PC, addr = s8(addr) + PC); PC=addr; })
+    t("2 2 2 2  ", if(!t) { tick(); Misfire(PC, addr = s8(addr) + PC); PC=addr; })
+    /* Addition and subtraction */
+    t("   P   R ", c = t; t += A + P.C; P.V = (c^t) & (A^t) & 0x80; P.C = t & 0x100)
+    t("      V0 ", t = c - t; P.C = ~t & 0x100) // cmp,cpx,cpy, dcp, sbx
+    /* Store modified value (register) */
+    t("SSST;R R ", A = t)
+    t("     b,& ", X = t) // ldx, dex, tax, inx, tsx,lax,las,sbx
+    t("    &E&  ", Y = t) // ldy, dey, tay, iny
+    t("    DB   ", S = t) // txs, las, shs
+    t("9:98 888%", P.raw = t & ~0x30) // plp, rti, flag set/clear
+    /* Generic status flag updates */
+    t("eeef<rjh ", P.N = t & 0x80)
+    t("eief<rjh ", P.Z = u8(t) == 0)
+    t("   )     ", P.V = (((t >> 5)+1)&2))         // [arr]
+
+The above version also incorporates the fix for missing
+double-writes in read-modify-write instructions.

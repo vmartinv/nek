@@ -79,8 +79,7 @@ La consola tiene una latencia de interrupción de 7 ciclos, que implica que tard
 
 
 \section{Modos de Acceso}
-El 6502 tiene distintos modos de acceso, los cuales proveen distintas formas de acceder a memoria. Hay algunos que operan sobre los contenidos de registros. En total existen 13 modos distintos.
-
+El 6502 tiene distintos modos de acceso, los cuales proveen distintas formas de acceder a memoria. Hay algunos que operan sobre los contenidos de registros. En total existen 13 modos distintos. Los mismos se detallan en \cite[p.~39]{nesdoc}
 \section{Instrucciones}
 
 El procesador tiene 56 instrucciones diferentes aunque algunas se repiten, usando distintos modos de acceso haciendo un total de 151 opcodes válidos de un posible total de 256. Las instrucciones tienen uno, dos o tres bytes de longitud, dependiendo del modo de acceso. El primer byte es el opcode y los restantes los operandos.
@@ -89,5 +88,32 @@ El procesador tiene 56 instrucciones diferentes aunque algunas se repiten, usand
 
 Para sintetizar todas las instrucciones necesarias en el código, se descompuso cada instrucción en micro-operaciones. Por ejemplo para hacer un ADD (suma), primero se traen los operandos de memoria o de registros, luego se efectua la suma, después se guarda el resultado en el registro correspondiente y por último se modifican las flags del status register adecuadas. Cada uno de estos pasos es una micro-operación.
 
-Si pudieramos aprovechar que que sólo se necesitan 56 micro-operaciones para poder expresar \emph{todas} las instrucciones del procesador, se podría simplificar mucho el diseño.
+Se puede aprovechar el hecho de que sólo se necesitan 56 micro-operaciones para poder expresar \emph{todas} las instrucciones del procesador, para lograr un emulador del procesador mucho más corto en terminos de código.
+
+El procedimiento que se siguió fue el siguiente. Se juntaron todas las micro-operaciones en una misma función, que recibe la instrucción a ejecutar. Para cada micro-instrucción se decide si se debe ejecutar o no, usando una máscara de 256 bits (un bit por cada instrucción). Así, si el bit i de la máscara correspondiente a la micro-instrucción j es 1, significa que j es una de las micro-instrucciones que componen la instrucción i.
+En otras palabras, para cada operación se accede a las máscaras de bits de cada una de las micro-instrucciones y si el bit resulta uno la micro-operación es ejecutada.
+
+Para evitar acceder a la máscara de bits en tiempo de ejecución, se usaron templates (C++) las cuales realizan todo el proceso de las máscaras de bits en tiempo de compilación, lo que lleva a un ejecutable con 256 funciones (una para cada operación) automáticamente sintetizadas.
+
+Para guardar las máscaras de bits en el código, se utilizó una codificación especial, la cual está detallada en util/specs/base256-explained.txt .
+
+
+\section{PPU}
+No se pretende explicar en detalle el completo funcionamiento de la parte gráfica de la consola. La PPU tiene una memoria separada de la CPU con su propio memory map, y a su vez contiene cuatro registros que controlan mediante distintos bits su funcionamiento. Para información detallada puede consultar \cite[p.~16]{nesdoc} y los documentos disponibles en \cite{techdocs}.
+
+\subsection{Colores}
+La consola cuenta con 52 colores. Pero no todos pueden usarse a la vez. Existen dos paletas de 16 colores, la paleta de imagen y la de sprites, en cada una no se guardan los colores, sino los índices a los colores del sistema.
+
+\subsection{Composición de la pantalla}
+Cada frame que es mostrado en la pantalla está formado por el fondo y los sprites (objetos móviles). El fondo en un principio estaría fijo, pero es posible configurar la PPU para que el fondo se vaya desplazando horizontal por ejemplo, tal como lo hacía Super Mario Bros. Tanto los sprites como el fondo se dividen en 'tiles' de 8x8 pixeles, todos estos tiles son guardados en la pattern table, ubicada en la memoria PPU. Para saber que tile va en que lugar de la pantalla se usan los name tables. Cada name table está asociada a un pattern table. No se pretende ahondar en el tema, pero combinando la información del tile con la pattern table se obtiene el color del pixel resultante.
+
+\subsection{Proceso de dibujado}
+
+Las imagenes son mostradas en la televisión por un rayo de electrones a alta velocidad que se mueve por la pantalla, de izquierda a derecha, dibujando cada pixel. Una sóla lina de pixeles es llamada scanline. Al final de cada scanline el rayo de electrones debe moverse a la siguiente línea y retornar a la izquierda antes de proceder. El tiempo que tarda en hacer esto es conocido como periodo Horizontal Blank (H-Blank).
+
+Luego de dibujar la pantalla una vez, el rayo de electrones debe retornar a la izquina superior izquierda, para empezar el siguiente frame. El tiempo que toma hacer esto es conocido como el periodo Vertical Blank (V-Blank). Cuando el periodo V-Blank comienza, la PPU prende el bit 7 del registro I/O \$2002.
+
+Para ver el proceso completo realizado por el emulador ver el archivo emulador/ppu.cpp, línea 249.
+
+
 

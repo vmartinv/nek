@@ -70,6 +70,12 @@ extern void fault_handler(registers_t *r)
 	}
 }
 
+void nothing(registers_t *regs){}
+
+void ignore_interrupt (uint8_t n){
+	interrupt_handlers [n] = nothing;
+}
+
 /** This installs a custom IRQ handler for the given IRQ **/
 
 void register_interrupt_handler (uint8_t n, interrupt_handler_t h)
@@ -118,6 +124,8 @@ void irq_install()
 	idt_set_gate(45, (unsigned)irq13, 0x08, 0x8E);
 	idt_set_gate(46, (unsigned)irq14, 0x08, 0x8E);
 	idt_set_gate(47, (unsigned)irq15, 0x08, 0x8E);
+	
+	ignore_interrupt(IRQ7);
 	return;
 }
 ///Handles IRQ's

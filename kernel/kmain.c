@@ -4,6 +4,7 @@
 #include <sys/timer.h>
 #include <sys/syscall.h>
 #include <sys/task.h>
+#include <sys/sound.h>
 #include <fs/vfs.h>
 #include <arch/x86/lba.h>
 #include <arch/x86/pci/pci.h>
@@ -38,5 +39,6 @@ void kmain(const multiboot_info_t * multiboot)
 	//~ pci_init();
 	//~ pci_load_drivers();
 	
+	beep();
 	main();
 }

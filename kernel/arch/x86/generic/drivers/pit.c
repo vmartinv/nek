@@ -11,6 +11,7 @@ void pit_handler(registers_t *regs)
 	//timer_report_ticks(TIMER_PIT,pit_internal_ticks);
 	cycle_timers();
 }
+
 ///Starts the PIT at frequency
 void pit_install(uint32_t frequency)
 {

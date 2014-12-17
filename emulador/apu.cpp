@@ -1,12 +1,13 @@
 #include <apu.h>
 #include <cpu.h>
+#include <sys/sound.h>
 
 namespace APU{
 	void tick(){}
 	void Write(u8 index, u8 value){}
 	u8 Read(){return 0;}
 }
-//~ 
+
 //~ namespace APU /* Audio Processing Unit */
 //~ {
     //~ static const u8 LengthCounters[32] = { 10,254,20, 2,40, 4,80, 6,160, 8,60,10,14,12,26,14,

@@ -14,6 +14,7 @@
 
 
 int play_game(const char *game){
+	video_flush_console();
     // Open the ROM file
     FILE* fp = fopen(game, "rb");
     if(!fp) return 1;

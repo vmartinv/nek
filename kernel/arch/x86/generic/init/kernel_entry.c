@@ -18,7 +18,6 @@ void pit_install(uint32_t frequency);
 
 void kmain(const multiboot_info_t * multiboot);
 void kbd_init();
-
 /// The entry point for the x86 version of the NesOS Microkernel
 #if defined(__cplusplus)
 extern "C" /* Use C linkage for kernel_main. */
@@ -45,9 +44,10 @@ void kernel_entry(int magic, const multiboot_info_t * multiboot) {
     printk("status", "Initialising the processor...\n");
     x86_init_descriptor_tables();
     printk("cpu", "Starting interrupts...\n");
-    asm("sti");
     printk("device", "Starting (basic) PIT...\n");
     pit_install(1000);
+	kbd_init();
+    asm("sti");
     
 	// Find the location of our initial ramdisk.
 	assert(multiboot->mods_count > 0);
@@ -65,7 +65,6 @@ void kernel_entry(int magic, const multiboot_info_t * multiboot) {
          //~ printf("0x%08X->0x%08X (type %d)\n",mmap->addr,mmap->len,mmap->type);
         //~ mmap = (multiboot_memory_map_t*) ( (unsigned int)mmap + mmap->size + sizeof(unsigned int) );
     //~ }
-	kbd_init();
     printk("debug", "Exiting Boot\n");
     console_printdiv();
     kmain(multiboot);
