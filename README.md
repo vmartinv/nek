@@ -5,6 +5,12 @@ to run a NES emulator. It does not have pagging nor userspace nor any kind of pr
 Only one program can be running at a time. Only on program can be run.
 It is embedded with the kernel, which means the program's code is compiled with the kernel.
 
+Screenshots
+================
+![alt Home Screen] (https://raw.githubusercontent.com/mvpossum/nek/master/examples/homescreen.png)
+
+![alt Mario Bros](https://raw.githubusercontent.com/mvpossum/nek/master/examples/samplegame.png)
+
 Building
 ================
 You should use make and provide the cross compiler:
