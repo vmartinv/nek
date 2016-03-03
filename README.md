@@ -21,7 +21,7 @@ If there are not errors, kernel.elf should be in the bin folder.
 Examples
 ================
 Besides "emulador" there are two other working programs.
-mandelbrot (shows a exprorable fractal)
+mandelbrot (shows a explorable fractal)
 paleta (shows nes avalaible colors)
 corazon (a heart animation using math functions)
 All of them can be compiled with the kernel using make.
