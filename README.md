@@ -2,8 +2,8 @@ Introduction
 ================
 Nintendo Entertainment Kernel is a very basic kernel with only the minimun
 to run a NES emulator. It does not have pagging nor userspace nor any kind of protection at all.
-Only one program can be running at a time. Only on program can be run.
-It is embedded with the kernel, which means the program's code is compiled with the kernel.
+Only one program can be running at a time. Only one program can be run.
+It is embedded in the kernel, which means the program's code is compiled alongside the kernel.
 
 Screenshots
 ================
@@ -20,10 +20,10 @@ If there are not errors, kernel.elf should be in the bin folder.
 
 Examples
 ================
-Besides "emulador" there are two other working programs.
-mandelbrot (shows a explorable fractal)
-paleta (shows nes avalaible colors)
-corazon (a heart animation using math functions)
+Besides "emulador" there are three other working programs:
+- mandelbrot (shows a explorable fractal)
+- paleta (shows nes avalaible colors)
+- corazon (a heart animation using math functions)
 All of them can be compiled with the kernel using make.
 Ej: make program=examples/mandelbrot
 
@@ -54,7 +54,7 @@ Dependencies
 - grub-mkrescue (optional): For generating a booteable cd image (.iso)
 
 
-Boot process
+Boot call stack
 ================
 GRUB (multiboot standard)
 
