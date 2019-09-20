@@ -1,9 +1,7 @@
 Introduction
 ================
 Nintendo Entertainment Kernel is a very basic kernel with only the minimun
-to run a NES emulator. It does not have pagging nor userspace nor any kind of protection at all.
-Only one program can be running at a time. Only one program can be run.
-It is embedded in the kernel, which means the program's code is compiled alongside the kernel.
+to run a NES emulator. This means that it can be run without any OS. It does not have pagging nor userspace nor any kind of protection at all. Only one program can be run. It is embedded in the kernel, which means the program's code is compiled alongside the kernel.
 
 Screenshots
 ================
