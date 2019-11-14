@@ -22,7 +22,9 @@ Besides "emulador" there are three other working programs:
 - mandelbrot (shows a explorable fractal)
 - paleta (shows nes avalaible colors)
 - corazon (a heart animation using math functions)
+
 All of them can be compiled with the kernel using make.
+
 Ej: make program=examples/mandelbrot
 
 Installing
