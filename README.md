@@ -5,7 +5,7 @@ to run a NES emulator. This means that it can be run without any OS. It does not
 
 Screenshots
 ================
-![alt Home Screen] (https://raw.githubusercontent.com/mvpossum/nek/master/examples/homescreen.png)
+![alt Home Screen](https://raw.githubusercontent.com/mvpossum/nek/master/examples/homescreen.png)
 
 ![alt Mario Bros](https://raw.githubusercontent.com/mvpossum/nek/master/examples/samplegame.png)
 
