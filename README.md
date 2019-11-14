@@ -73,7 +73,7 @@ Folder Structure
 - kernel/fs file system(currently only vfs implemented)
 - fdlibm: a math library downloaded from internet
 - util/specs: Some useful documents
-- informe: Informe borrador
+- informe: University report (in spanish)
 - iso: a few files to generate an .iso with the kernel
 - util: contains the program to generate the initrd and a few other things
 - util/fuente: Tools/file used to generate the console font
